@@ -5,16 +5,31 @@ Command-line interface for [Paragraph](https://paragraph.com). Designed for both
 ## Installation
 
 ```bash
-yarn install
-yarn build
-yarn link
+npm install
+npm run build
+npm link
 
 paragraph --help
 ```
 
+## Interactive TUI
+
+Running `paragraph` with no arguments launches an interactive terminal UI with menus, scrollable lists, and keyboard navigation:
+
+```bash
+paragraph
+```
+
+The TUI supports browsing posts, managing subscribers, searching, and more — all from the terminal. Press `esc` to go back, arrow keys to scroll lists, and `Ctrl+C` to exit.
+
+The TUI is disabled automatically when:
+- `--json`, `--help`, or `--version` flags are used
+- stdout is not a TTY (e.g., piped output)
+- `CI=true` or `PARAGRAPH_NON_INTERACTIVE=1` is set
+
 ## Authentication
 
-Get your API key from **paragraph.com/settings → Publication → Developer**.
+Get your API key from **paragraph.com/settings -> Publication -> Developer**.
 
 ```bash
 # Interactive login (opens browser or prompts for key)
@@ -36,7 +51,7 @@ paragraph whoami
 paragraph logout
 ```
 
-Credentials are stored in `~/.paragraph/config.json` (mode 0600).
+Credentials are stored in `~/.paragraph/config.json` (mode 0600). If an API key is revoked, the CLI automatically clears the stored credentials on the next 401 response.
 
 ## Commands
 
@@ -51,7 +66,7 @@ paragraph post list --limit 50 --cursor <cursor>
 # List posts from any publication (public)
 paragraph post list --publication <id-or-slug>
 
-# Get a post — accepts ID, URL, or @publication/slug
+# Get a post -- accepts ID, URL, or @publication/slug
 paragraph post get <post-id>
 paragraph post get @yearn/some-post-slug
 paragraph post get https://paragraph.com/@yearn/some-post-slug
@@ -99,7 +114,7 @@ paragraph delete my-post-slug --yes
 ### Publications
 
 ```bash
-# Get publication — accepts ID, slug, or custom domain
+# Get publication -- accepts ID, slug, or custom domain
 paragraph publication get @variantwriting
 paragraph publication get blog.variant.fund
 paragraph publication get <publication-id>
@@ -129,8 +144,6 @@ paragraph coin popular --limit 10
 paragraph coin search --query "test"
 paragraph coin holders <id-or-address> --limit 50
 paragraph coin quote <id-or-address> --amount <wei>
-paragraph coin buy-args <id-or-address> --wallet <addr> --amount <wei>
-paragraph coin sell-args <id-or-address> --wallet <addr> --amount <wei>
 ```
 
 ### Users
@@ -149,23 +162,41 @@ The CLI is designed for use by AI agents and scripts. Key features:
 All commands support `--json`. Data goes to **stdout**, status messages to **stderr**, so you can pipe cleanly:
 
 ```bash
-paragraph --json post list | jq '.[0].title'
+paragraph --json post list | jq '.data[0].title'
 paragraph --json post get <id> | jq '.markdown'
-paragraph --json search post --query "web3" | jq 'length'
+paragraph --json search post --query "web3" | jq '.length'
+```
+
+Paginated commands return structured output with pagination metadata:
+
+```json
+{
+  "data": [{ "id": "...", "title": "..." }],
+  "pagination": { "cursor": "abc123", "hasMore": true }
+}
+```
+
+Single-item commands return the object directly:
+
+```json
+{ "id": "...", "title": "...", "markdown": "..." }
 ```
 
 ### Structured errors
 
-In `--json` mode, errors are structured JSON on stdout with a non-zero exit code:
+In `--json` mode, errors are structured JSON on **stderr** with a non-zero exit code:
 
 ```json
-{"error": "Not found. Request failed with status code 404", "status": 404}
-{"error": "No API key found. Run `paragraph login` or set PARAGRAPH_API_KEY."}
+{ "error": "Not found.", "code": "NOT_FOUND", "status": 404 }
+{ "error": "Unauthorized. Check your API key or run `paragraph login`.", "code": "UNAUTHORIZED", "status": 401 }
+{ "error": "Rate limited. Please wait and try again.", "code": "RATE_LIMITED", "status": 429 }
 ```
+
+Error codes: `UNAUTHORIZED`, `FORBIDDEN`, `NOT_FOUND`, `RATE_LIMITED`, `SERVER_ERROR`, `REQUEST_FAILED`, `CLIENT_ERROR`, `UNKNOWN`.
 
 ### Field extraction
 
-Use `--field` to extract a single value from any `post get` result — outputs raw content to stdout with no formatting:
+Use `--field` to extract a single value from any `post get` result -- outputs raw content to stdout with no formatting:
 
 ```bash
 # Download post content as markdown
@@ -177,15 +208,17 @@ title=$(paragraph post get <id> --field title)
 
 ### Pagination
 
-List commands support `--limit` and `--cursor` for pagination:
+List commands support `--limit` (clamped to 1-100) and `--cursor` for pagination:
 
 ```bash
 # First page
 paragraph --json post list --publication yearn --limit 10
 
-# Subsequent pages (cursor printed to stderr)
+# Subsequent pages (use cursor from previous response)
 paragraph --json post list --publication yearn --limit 10 --cursor <cursor>
 ```
+
+In `--json` mode, the cursor is included in the response under `pagination.cursor`. In human mode, it's printed to stderr.
 
 ### Non-interactive safety
 
@@ -205,6 +238,8 @@ paragraph --json post list --publication yearn --limit 10 --cursor <cursor>
 ## Development
 
 ```bash
-yarn build          # build once
-yarn dev            # watch mode
+npm run build       # build once
+npm run dev         # watch mode
 ```
+
+Requires Node.js >= 18.
