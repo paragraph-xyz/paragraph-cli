@@ -3,6 +3,7 @@ import { Box, Text, useInput } from "ink";
 import { Spinner } from "@inkjs/ui";
 import { StatusMessage } from "@inkjs/ui";
 import { Header } from "../components/Header.js";
+import { ScrollableList } from "../components/ScrollableList.js";
 import { useNavigation } from "../hooks/useNavigation.js";
 import { useApi } from "../hooks/useApi.js";
 import { getFeed } from "../../services/posts.js";
@@ -22,10 +23,10 @@ export function Feed() {
       {error && (
         <StatusMessage variant="error">{error.message}</StatusMessage>
       )}
-      {data && data.length === 0 && <Text dimColor>No posts in feed.</Text>}
-      {data && data.length > 0 && (
-        <Box flexDirection="column">
-          {data.map((item, i) => {
+      {data && (
+        <ScrollableList
+          items={data.items}
+          renderItem={(item, i) => {
             const post = item.post as Record<string, unknown> | undefined;
             const pub = item.publication as Record<string, unknown> | undefined;
             const pubSlug = String(pub?.slug || pub?.url || "").replace(/^@/, "");
@@ -46,8 +47,8 @@ export function Feed() {
                 )}
               </Box>
             );
-          })}
-        </Box>
+          }}
+        />
       )}
     </Box>
   );

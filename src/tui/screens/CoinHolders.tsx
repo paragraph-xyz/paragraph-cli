@@ -23,7 +23,8 @@ export function CoinHolders() {
     setLoading(true);
     setError(null);
     try {
-      setHolders(await getCoinHolders(idOrAddress));
+      const result = await getCoinHolders(idOrAddress);
+      setHolders(result.items);
     } catch (err) {
       setError(err instanceof Error ? err.message : String(err));
     }

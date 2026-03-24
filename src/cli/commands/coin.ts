@@ -132,39 +132,4 @@ export function registerCoinCommands(program: Command): void {
       }
     });
 
-  coin
-    .command("buy-args <id-or-address>")
-    .description("Get transaction args to buy a coin")
-    .requiredOption("--wallet <address>", "Buyer wallet address")
-    .requiredOption("--amount <wei>", "Amount of ETH in wei")
-    .action(async function (this: Command, idOrAddress: string, opts) {
-      try {
-        const result = await coins.getBuyArgs(
-          idOrAddress,
-          opts.wallet,
-          opts.amount
-        );
-        outputData(this, result, result);
-      } catch (err) {
-        handleError(err);
-      }
-    });
-
-  coin
-    .command("sell-args <id-or-address>")
-    .description("Get transaction args to sell a coin")
-    .requiredOption("--wallet <address>", "Seller wallet address")
-    .requiredOption("--amount <wei>", "Amount of coin in wei")
-    .action(async function (this: Command, idOrAddress: string, opts) {
-      try {
-        const result = await coins.getSellArgs(
-          idOrAddress,
-          opts.wallet,
-          opts.amount
-        );
-        outputData(this, result, result);
-      } catch (err) {
-        handleError(err);
-      }
-    });
 }

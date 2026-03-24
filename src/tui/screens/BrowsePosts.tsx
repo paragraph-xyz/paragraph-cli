@@ -22,6 +22,7 @@ export function BrowsePosts() {
   useInput((_input, key) => {
     if (key.escape) {
       if (posts || error) {
+        process.stdout.write("\x1B[2J\x1B[H");
         setPosts(null);
         setError(null);
       } else {
@@ -34,8 +35,8 @@ export function BrowsePosts() {
     setLoading(true);
     setError(null);
     try {
-      const items = await listPosts({ publicationId });
-      setPosts(items);
+      const result = await listPosts({ publicationId });
+      setPosts(result.items);
     } catch (err) {
       setError(err instanceof Error ? err.message : String(err));
     }

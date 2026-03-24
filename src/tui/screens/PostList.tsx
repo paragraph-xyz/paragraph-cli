@@ -33,10 +33,10 @@ export function PostList() {
       {error && (
         <StatusMessage variant="error">{error.message}</StatusMessage>
       )}
-      {data && data.length === 0 && <Text dimColor>No posts found.</Text>}
-      {data && data.length > 0 && (
+      {data && data.items.length === 0 && <Text dimColor>No posts found.</Text>}
+      {data && data.items.length > 0 && (
         <Select
-          options={data.map((p) => ({
+          options={data.items.map((p) => ({
             label: `${p.title || "Untitled"}`,
             value: String(p.id),
             description: `${p.status || ""} · ${formatDate(p.publishedAt || p.createdAt)}`,

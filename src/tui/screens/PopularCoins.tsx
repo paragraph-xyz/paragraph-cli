@@ -3,6 +3,7 @@ import { Box, Text, useInput } from "ink";
 import { Spinner } from "@inkjs/ui";
 import { StatusMessage } from "@inkjs/ui";
 import { Header } from "../components/Header.js";
+import { ScrollableList } from "../components/ScrollableList.js";
 import { useNavigation } from "../hooks/useNavigation.js";
 import { useApi } from "../hooks/useApi.js";
 import { getPopularCoins } from "../../services/coins.js";
@@ -22,10 +23,10 @@ export function PopularCoins() {
       {error && (
         <StatusMessage variant="error">{error.message}</StatusMessage>
       )}
-      {data && data.length === 0 && <Text dimColor>No coins found.</Text>}
-      {data && data.length > 0 && (
-        <Box flexDirection="column">
-          {data.map((c, i) => {
+      {data && (
+        <ScrollableList
+          items={data.items}
+          renderItem={(c, i) => {
             const metadata = c.metadata as Record<string, unknown> | undefined;
             return (
               <Box key={i} flexDirection="column" marginBottom={1}>
@@ -36,8 +37,8 @@ export function PopularCoins() {
                 <Text dimColor>{String(c.contractAddress || "")}</Text>
               </Box>
             );
-          })}
-        </Box>
+          }}
+        />
       )}
     </Box>
   );

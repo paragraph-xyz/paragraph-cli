@@ -57,10 +57,12 @@ export function NavigationProvider({
   const screen = stack[stack.length - 1]!;
 
   const navigate = useCallback((s: Screen) => {
+    process.stdout.write("\x1B[2J\x1B[H");
     setStack((prev) => [...prev, s]);
   }, []);
 
   const goBack = useCallback(() => {
+    process.stdout.write("\x1B[2J\x1B[H");
     setStack((prev) => (prev.length > 1 ? prev.slice(0, -1) : prev));
   }, []);
 

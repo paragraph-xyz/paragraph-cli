@@ -30,7 +30,7 @@ export function SubscriberList() {
       {data && (
         <TableView
           headers={["Email", "Wallet", "Date"]}
-          rows={data.map((s) => [
+          rows={data.items.map((s) => [
             String(s.email || ""),
             String(s.walletAddress || ""),
             s.createdAt

@@ -1,50 +1,19 @@
 import * as os from "os";
 import { execFile } from "child_process";
+import { createClient } from "./client.js";
 
-const API_BASE =
-  process.env.PARAGRAPH_API_URL || "https://public.api.paragraph.com/api";
 const POLL_INTERVAL_MS = 2000;
 const POLL_TIMEOUT_MS = 5 * 60 * 1000;
 
-interface AuthSession {
-  sessionId: string;
-  verificationUrl: string;
-  expiresAt: string;
-}
-
-interface AuthSessionStatus {
-  status: "pending" | "completed" | "expired";
-  apiKey?: string;
-}
-
-async function httpJson<T>(
-  url: string,
-  options: { method?: string; body?: unknown } = {}
-): Promise<T> {
-  const { default: axios } = await import("axios");
-  const res = await axios({
-    url,
-    method: (options.method || "GET") as "GET" | "POST",
-    data: options.body,
-    headers: { "Content-Type": "application/json" },
-  });
-  return res.data as T;
-}
-
-export async function createLoginSession(): Promise<AuthSession> {
+export async function createLoginSession() {
+  const client = createClient();
   const deviceName = `${os.userInfo().username}@${os.hostname()}`;
-  return httpJson<AuthSession>(`${API_BASE}/v1/api/auth/sessions`, {
-    method: "POST",
-    body: { deviceName },
-  });
+  return client.auth.createSession({ deviceName });
 }
 
-export async function pollLoginSession(
-  sessionId: string
-): Promise<AuthSessionStatus> {
-  return httpJson<AuthSessionStatus>(
-    `${API_BASE}/v1/api/auth/sessions/${sessionId}`
-  );
+export async function pollLoginSession(sessionId: string) {
+  const client = createClient();
+  return client.auth.getSession(sessionId);
 }
 
 export async function waitForLogin(sessionId: string): Promise<string> {

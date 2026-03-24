@@ -32,8 +32,8 @@ export async function listPosts(params: {
     const result = await client.posts.get(
       query as Parameters<typeof client.posts.get>[0]
     );
-    const data = result as { items: Record<string, unknown>[]; cursor?: string };
-    return { items: data.items, cursor: data.cursor };
+    const data = result as { items: Record<string, unknown>[]; pagination?: { cursor?: string } };
+    return { items: data.items, cursor: data.pagination?.cursor };
   }
 
   const queryParams: Record<string, unknown> = {};
@@ -43,8 +43,8 @@ export async function listPosts(params: {
   const result = await client.posts.list(
     queryParams as Parameters<typeof client.posts.list>[0]
   );
-  const data = result as { items: Record<string, unknown>[]; cursor?: string };
-  return { items: data.items, cursor: data.cursor };
+  const data = result as { items: Record<string, unknown>[]; pagination?: { cursor?: string } };
+  return { items: data.items, cursor: data.pagination?.cursor };
 }
 
 export async function getPost(
@@ -117,8 +117,8 @@ export async function getPostsByTag(
   const result = await client.posts.get(
     query as Parameters<typeof client.posts.get>[0]
   );
-  const data = result as { items: Record<string, unknown>[]; cursor?: string };
-  return { items: data.items, cursor: data.cursor };
+  const data = result as { items: Record<string, unknown>[]; pagination?: { cursor?: string } };
+  return { items: data.items, cursor: data.pagination?.cursor };
 }
 
 export async function getFeed(pagination?: {
@@ -131,8 +131,8 @@ export async function getFeed(pagination?: {
   const result = await client.feed.get(
     query as Parameters<typeof client.feed.get>[0]
   );
-  const data = result as { items: Record<string, unknown>[]; cursor?: string };
-  return { items: data.items, cursor: data.cursor };
+  const data = result as { items: Record<string, unknown>[]; pagination?: { cursor?: string } };
+  return { items: data.items, cursor: data.pagination?.cursor };
 }
 
 export async function createPost(params: {

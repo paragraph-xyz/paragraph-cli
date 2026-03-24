@@ -17,8 +17,8 @@ export async function listSubscribers(
   const result = await client.subscribers.get(
     Object.keys(query).length ? query as Parameters<typeof client.subscribers.get>[0] : undefined
   );
-  const data = result as { items: Record<string, unknown>[]; cursor?: string };
-  return { items: data.items, cursor: data.cursor };
+  const data = result as { items: Record<string, unknown>[]; pagination?: { cursor?: string; hasMore?: boolean } };
+  return { items: data.items, cursor: data.pagination?.cursor };
 }
 
 export async function getSubscriberCount(

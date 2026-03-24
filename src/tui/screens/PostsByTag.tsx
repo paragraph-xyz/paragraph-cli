@@ -3,6 +3,7 @@ import { Box, Text, useInput } from "ink";
 import { TextInput, Spinner } from "@inkjs/ui";
 import { StatusMessage } from "@inkjs/ui";
 import { Header } from "../components/Header.js";
+import { ScrollableList } from "../components/ScrollableList.js";
 import { useNavigation } from "../hooks/useNavigation.js";
 import { getPostsByTag } from "../../services/posts.js";
 
@@ -22,6 +23,7 @@ export function PostsByTag() {
   useInput((_input, key) => {
     if (key.escape) {
       if (posts || error) {
+        process.stdout.write("\x1B[2J\x1B[H");
         setPosts(null);
         setError(null);
       } else {
@@ -34,7 +36,8 @@ export function PostsByTag() {
     setLoading(true);
     setError(null);
     try {
-      setPosts(await getPostsByTag(tag));
+      const result = await getPostsByTag(tag);
+      setPosts(result.items);
     } catch (err) {
       setError(err instanceof Error ? err.message : String(err));
     }
@@ -57,10 +60,10 @@ export function PostsByTag() {
       )}
       {loading && <Spinner label="Loading posts..." />}
       {error && <StatusMessage variant="error">{error}</StatusMessage>}
-      {posts && posts.length === 0 && <Text dimColor>No posts found with this tag.</Text>}
-      {posts && posts.length > 0 && (
-        <Box flexDirection="column">
-          {posts.map((p, i) => (
+      {posts && (
+        <ScrollableList
+          items={posts}
+          renderItem={(p, i) => (
             <Box key={i} flexDirection="column" marginBottom={1}>
               <Text bold>{String(p.title || "Untitled")}</Text>
               <Text dimColor>
@@ -68,8 +71,8 @@ export function PostsByTag() {
                 {p.publishedAt || p.createdAt ? ` · ${formatDate(p.publishedAt || p.createdAt)}` : ""}
               </Text>
             </Box>
-          ))}
-        </Box>
+          )}
+        />
       )}
     </Box>
   );

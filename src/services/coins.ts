@@ -30,8 +30,8 @@ export async function getPopularCoins(pagination?: {
   const result = await client.coins.get(
     query as Parameters<typeof client.coins.get>[0]
   );
-  const data = result as { items: Record<string, unknown>[]; cursor?: string };
-  return { items: data.items, cursor: data.cursor };
+  const data = result as { items: Record<string, unknown>[]; pagination?: { cursor?: string } };
+  return { items: data.items, cursor: data.pagination?.cursor };
 }
 
 export async function searchCoins(
@@ -39,40 +39,6 @@ export async function searchCoins(
 ): Promise<Record<string, unknown>[]> {
   const client = createClient();
   return (await client.search.coins(query)) as Record<string, unknown>[];
-}
-
-export async function getBuyArgs(
-  idOrAddress: string,
-  walletAddress: string,
-  amount: string
-): Promise<Record<string, unknown>> {
-  const { default: axios } = await import("axios");
-  const base =
-    process.env.PARAGRAPH_API_URL || "https://public.api.paragraph.com/api";
-  const path = idOrAddress.startsWith("0x")
-    ? `/v1/coins/buy/contract/${idOrAddress}`
-    : `/v1/coins/buy/${idOrAddress}`;
-  const res = await axios.get(`${base}${path}`, {
-    params: { walletAddress, amount },
-  });
-  return res.data as Record<string, unknown>;
-}
-
-export async function getSellArgs(
-  idOrAddress: string,
-  walletAddress: string,
-  amount: string
-): Promise<Record<string, unknown>> {
-  const { default: axios } = await import("axios");
-  const base =
-    process.env.PARAGRAPH_API_URL || "https://public.api.paragraph.com/api";
-  const path = idOrAddress.startsWith("0x")
-    ? `/v1/coins/sell/contract/${idOrAddress}`
-    : `/v1/coins/sell/${idOrAddress}`;
-  const res = await axios.get(`${base}${path}`, {
-    params: { walletAddress, amount },
-  });
-  return res.data as Record<string, unknown>;
 }
 
 export async function getCoinQuote(
@@ -103,5 +69,6 @@ export async function getCoinHolders(
   const items = (data.items ||
     data.holders ||
     (Array.isArray(data) ? data : [])) as Record<string, unknown>[];
-  return { items, cursor: data.cursor as string | undefined };
+  const pag = (data as { pagination?: { cursor?: string } }).pagination;
+  return { items, cursor: pag?.cursor };
 }
