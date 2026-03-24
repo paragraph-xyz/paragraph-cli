@@ -1,0 +1,35 @@
+{
+  "name": "@paragraph-com/cli",
+  "version": "0.1.0",
+  "type": "module",
+  "description": "CLI for Paragraph",
+  "bin": {
+    "paragraph": "./dist/index.js"
+  },
+  "files": [
+    "dist"
+  ],
+  "scripts": {
+    "build": "tsup",
+    "dev": "tsup --watch"
+  },
+  "engines": {
+    "node": ">=18"
+  },
+  "dependencies": {
+    "@inkjs/ui": "^2.0.0",
+    "@paragraph-com/sdk": "file:../paragraph-sdk-js",
+    "cli-table3": "^0.6.5",
+    "commander": "^12.0.0",
+    "ink": "^5.1.0",
+    "picocolors": "^1.1.0",
+    "react": "^18.3.1"
+  },
+  "devDependencies": {
+    "@types/node": "^20.0.0",
+    "@types/react": "^18.3.0",
+    "tsup": "^8.3.5",
+    "typescript": "^5.0.0"
+  },
+  "packageManager": "yarn@3.4.1"
+}
