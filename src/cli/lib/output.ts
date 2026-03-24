@@ -26,10 +26,17 @@ export function outputTable(
   cmd: Command,
   headers: string[],
   rows: string[][],
-  rawData: unknown[]
+  rawData: unknown[],
+  pagination?: { cursor?: string }
 ): void {
   if (isJsonMode(cmd)) {
-    process.stdout.write(JSON.stringify(rawData, null, 2) + "\n");
+    const output: Record<string, unknown> = { data: rawData };
+    if (pagination?.cursor) {
+      output.pagination = { cursor: pagination.cursor, hasMore: true };
+    } else {
+      output.pagination = { hasMore: false };
+    }
+    process.stdout.write(JSON.stringify(output, null, 2) + "\n");
     return;
   }
   if (rows.length === 0) {
@@ -53,4 +60,10 @@ export function writeError(text: string): void {
 
 export function writeSuccess(text: string): void {
   process.stderr.write(pc.green("✓ " + text) + "\n");
+}
+
+export function parseLimit(value: string, max = 100): number {
+  const n = parseInt(value, 10);
+  if (isNaN(n) || n < 1) return 1;
+  return Math.min(n, max);
 }

@@ -16,18 +16,26 @@ export async function pollLoginSession(sessionId: string) {
   return client.auth.getSession(sessionId);
 }
 
-export async function waitForLogin(sessionId: string): Promise<string> {
+export async function waitForLogin(sessionId: string, signal?: AbortSignal): Promise<string> {
   const deadline = Date.now() + POLL_TIMEOUT_MS;
 
   while (Date.now() < deadline) {
+    if (signal?.aborted) throw new Error("Login cancelled.");
     await sleep(POLL_INTERVAL_MS);
-    const status = await pollLoginSession(sessionId);
+    if (signal?.aborted) throw new Error("Login cancelled.");
+    let status;
+    try {
+      status = await pollLoginSession(sessionId);
+    } catch {
+      // Session was likely deleted (denied) — poll returns 404
+      throw new Error("Login was denied or expired. Please try again.");
+    }
 
     if (status.status === "completed" && status.apiKey) {
       return status.apiKey;
     }
-    if (status.status === "expired") {
-      throw new Error("Login session expired. Please try again.");
+    if (status.status !== "pending") {
+      throw new Error("Login was denied or expired. Please try again.");
     }
   }
 
@@ -35,12 +43,16 @@ export async function waitForLogin(sessionId: string): Promise<string> {
 }
 
 export function openBrowser(url: string): Promise<void> {
-  return new Promise((resolve) => {
+  return new Promise((resolve, reject) => {
     if (process.platform === "win32") {
-      execFile("cmd.exe", ["/c", "start", "", url], () => resolve());
+      execFile("cmd.exe", ["/c", "start", "", url], (err) =>
+        err ? reject(new Error(`Failed to open browser: ${err.message}`)) : resolve()
+      );
     } else {
       const command = process.platform === "darwin" ? "open" : "xdg-open";
-      execFile(command, [url], () => resolve());
+      execFile(command, [url], (err) =>
+        err ? reject(new Error(`Failed to open browser: ${err.message}`)) : resolve()
+      );
     }
   });
 }

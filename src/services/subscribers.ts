@@ -45,8 +45,7 @@ export async function importSubscribers(
 ): Promise<void> {
   const client = createClient(apiKey);
   const csvContent = fs.readFileSync(csvPath, "utf-8");
-  const file = new File([csvContent], "subscribers.csv", {
-    type: "text/csv",
-  });
+  // Use Blob (Node 18+) instead of File (Node 20+) for broader compatibility
+  const file = new Blob([csvContent], { type: "text/csv" }) as File;
   await client.subscribers.importCsv({ file });
 }

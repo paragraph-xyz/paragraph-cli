@@ -52,7 +52,7 @@ export function CoinHolders() {
           <TableView
             headers={["Wallet", "Balance"]}
             rows={holders.map((h) => [
-              String(h.walletAddress || h.address || ""),
+              String(h.walletAddress || ""),
               String(h.balance || ""),
             ])}
           />

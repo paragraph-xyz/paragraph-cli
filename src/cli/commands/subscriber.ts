@@ -1,7 +1,7 @@
 import { Command } from "commander";
 import { requireApiKey } from "../../services/auth.js";
 import * as subscribers from "../../services/subscribers.js";
-import { outputData, outputTable, writeSuccess, writeInfo } from "../lib/output.js";
+import { outputData, outputTable, writeSuccess, writeInfo, parseLimit } from "../lib/output.js";
 import { handleError } from "../lib/error.js";
 
 export function registerSubscriberCommands(program: Command): void {
@@ -18,7 +18,7 @@ export function registerSubscriberCommands(program: Command): void {
       try {
         const apiKey = requireApiKey();
         const result = await subscribers.listSubscribers(apiKey, {
-          limit: parseInt(opts.limit, 10),
+          limit: parseLimit(opts.limit),
           cursor: opts.cursor,
         });
         outputTable(
@@ -31,7 +31,8 @@ export function registerSubscriberCommands(program: Command): void {
               ? new Date(s.createdAt as string).toLocaleDateString()
               : "",
           ]),
-          result.items
+          result.items,
+          { cursor: result.cursor }
         );
         if (result.cursor) {
           writeInfo(`Next page: --cursor ${result.cursor}`);

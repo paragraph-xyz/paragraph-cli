@@ -2,7 +2,7 @@ import * as fs from "fs";
 import { Command } from "commander";
 import { getApiKey, requireApiKey } from "../../services/auth.js";
 import * as posts from "../../services/posts.js";
-import { outputData, outputTable, writeSuccess, writeInfo } from "../lib/output.js";
+import { outputData, outputTable, writeSuccess, writeInfo, parseLimit } from "../lib/output.js";
 import { handleError } from "../lib/error.js";
 import { readStdin } from "../lib/stdin.js";
 import { confirm } from "../lib/prompt.js";
@@ -93,7 +93,7 @@ export function registerPostCommands(program: Command): void {
           apiKey,
           publicationId: opts.publication,
           status: opts.status,
-          limit: parseInt(opts.limit, 10),
+          limit: parseLimit(opts.limit),
           cursor: opts.cursor,
         });
 
@@ -104,7 +104,7 @@ export function registerPostCommands(program: Command): void {
           formatDate(p),
         ]);
 
-        outputTable(this, headers, rows, result.items);
+        outputTable(this, headers, rows, result.items, { cursor: result.cursor });
         if (result.cursor) {
           writeInfo(`Next page: --cursor ${result.cursor}`);
         }
@@ -222,7 +222,7 @@ export function registerPostCommands(program: Command): void {
     .action(async function (this: Command, tag: string, opts) {
       try {
         const result = await posts.getPostsByTag(tag, {
-          limit: parseInt(opts.limit, 10),
+          limit: parseLimit(opts.limit),
           cursor: opts.cursor,
         });
         outputTable(
@@ -233,7 +233,8 @@ export function registerPostCommands(program: Command): void {
             String(p.title || ""),
             formatDate(p),
           ]),
-          result.items
+          result.items,
+          { cursor: result.cursor }
         );
         if (result.cursor) {
           writeInfo(`Next page: --cursor ${result.cursor}`);
@@ -252,7 +253,7 @@ export function registerPostCommands(program: Command): void {
     .action(async function (this: Command, opts) {
       try {
         const result = await posts.getFeed({
-          limit: parseInt(opts.limit, 10),
+          limit: parseLimit(opts.limit),
           cursor: opts.cursor,
         });
         outputTable(
@@ -267,7 +268,8 @@ export function registerPostCommands(program: Command): void {
               formatDate(p || {}),
             ];
           }),
-          result.items
+          result.items,
+          { cursor: result.cursor }
         );
         if (result.cursor) {
           writeInfo(`Next page: --cursor ${result.cursor}`);

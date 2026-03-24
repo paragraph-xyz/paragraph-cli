@@ -1,4 +1,5 @@
 import { useState, useEffect, useCallback } from "react";
+import { useAutoLogout } from "./useAutoLogout.js";
 
 interface ApiState<T> {
   data: T | null;
@@ -7,6 +8,7 @@ interface ApiState<T> {
 }
 
 export function useApi<T>(fn: () => Promise<T>) {
+  const handleUnauthorized = useAutoLogout();
   const [state, setState] = useState<ApiState<T>>({
     data: null,
     loading: true,
@@ -21,7 +23,10 @@ export function useApi<T>(fn: () => Promise<T>) {
         if (!cancelled) setState({ data, loading: false, error: null });
       })
       .catch((error) => {
-        if (!cancelled) setState({ data: null, loading: false, error });
+        if (!cancelled) {
+          if (handleUnauthorized(error)) return;
+          setState({ data: null, loading: false, error });
+        }
       });
     return () => {
       cancelled = true;

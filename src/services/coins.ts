@@ -65,10 +65,6 @@ export async function getCoinHolders(
     coinIdentifier(idOrAddress),
     Object.keys(query).length ? query as Parameters<typeof client.coins.getHolders>[1] : undefined
   );
-  const data = result as Record<string, unknown>;
-  const items = (data.items ||
-    data.holders ||
-    (Array.isArray(data) ? data : [])) as Record<string, unknown>[];
-  const pag = (data as { pagination?: { cursor?: string } }).pagination;
-  return { items, cursor: pag?.cursor };
+  const data = result as { items: Record<string, unknown>[]; pagination?: { cursor?: string } };
+  return { items: data.items, cursor: data.pagination?.cursor };
 }

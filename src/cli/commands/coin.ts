@@ -1,6 +1,6 @@
 import { Command } from "commander";
 import * as coins from "../../services/coins.js";
-import { outputData, outputTable, writeInfo } from "../lib/output.js";
+import { outputData, outputTable, writeInfo, parseLimit } from "../lib/output.js";
 import { handleError } from "../lib/error.js";
 
 export function registerCoinCommands(program: Command): void {
@@ -38,7 +38,7 @@ export function registerCoinCommands(program: Command): void {
     .option("--cursor <cursor>", "Pagination cursor from a previous request")
     .action(async function (this: Command, opts) {
       try {
-        const limit = parseInt(opts.limit, 10);
+        const limit = parseLimit(opts.limit);
         const result = await coins.getPopularCoins({
           limit,
           cursor: opts.cursor,
@@ -55,7 +55,8 @@ export function registerCoinCommands(program: Command): void {
               String(c.contractAddress || ""),
             ];
           }),
-          items
+          items,
+          { cursor: result.cursor }
         );
         if (result.cursor) {
           writeInfo(`Next page: --cursor ${result.cursor}`);
@@ -99,17 +100,18 @@ export function registerCoinCommands(program: Command): void {
     .action(async function (this: Command, idOrAddress: string, opts) {
       try {
         const result = await coins.getCoinHolders(idOrAddress, {
-          limit: parseInt(opts.limit, 10),
+          limit: parseLimit(opts.limit),
           cursor: opts.cursor,
         });
         outputTable(
           this,
           ["Wallet", "Balance"],
           result.items.map((h) => [
-            String(h.walletAddress || h.address || ""),
+            String(h.walletAddress || ""),
             String(h.balance || ""),
           ]),
-          result.items
+          result.items,
+          { cursor: result.cursor }
         );
         if (result.cursor) {
           writeInfo(`Next page: --cursor ${result.cursor}`);

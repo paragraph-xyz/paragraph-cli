@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useRef } from "react";
 import { Box, Text, useInput } from "ink";
 import { Select, Spinner, TextInput, PasswordInput } from "@inkjs/ui";
 import { StatusMessage } from "@inkjs/ui";
@@ -22,9 +22,17 @@ export function Login() {
   const [browserUrl, setBrowserUrl] = useState("");
   const [message, setMessage] = useState("");
   const [errorMsg, setErrorMsg] = useState("");
+  const abortRef = useRef<AbortController | null>(null);
 
   useInput((_input, key) => {
-    if (key.escape && step === "choose") goBack();
+    if (key.escape) {
+      if (step === "choose") {
+        goBack();
+      } else if (step === "browser") {
+        abortRef.current?.abort();
+        setStep("choose");
+      }
+    }
   });
 
   const doLogin = async (apiKey: string) => {
@@ -41,13 +49,16 @@ export function Login() {
 
   const startBrowserLogin = async () => {
     setStep("browser");
+    const abort = new AbortController();
+    abortRef.current = abort;
     try {
       const session = await createLoginSession();
       setBrowserUrl(session.verificationUrl);
       await openBrowser(session.verificationUrl);
-      const apiKey = await waitForLogin(session.sessionId);
+      const apiKey = await waitForLogin(session.sessionId, abort.signal);
       await doLogin(apiKey);
     } catch (err) {
+      if (abort.signal.aborted) return; // cancelled by user, already back at choose
       const msg = err instanceof Error ? err.message : String(err);
       if (msg.includes("404") || msg.includes("ECONNREFUSED")) {
         setErrorMsg("Browser login is not available yet. Try pasting an API key.");
@@ -95,6 +106,9 @@ export function Login() {
           </Box>
         ) : null}
         <Spinner label="Waiting for authentication..." />
+        <Box marginTop={1}>
+          <Text dimColor>Press esc to cancel</Text>
+        </Box>
       </Box>
     );
   }

@@ -29,7 +29,20 @@ export function createProgram(): Command {
     .name("paragraph")
     .description("CLI for Paragraph")
     .version(getVersion(), "-v, --version")
-    .option("--json", "Output as JSON");
+    .option("--json", "Output as JSON")
+    .exitOverride()
+    .configureOutput({
+      writeOut: (str) => process.stdout.write(str),
+      writeErr: (str) => {
+        if (process.argv.includes("--json")) {
+          process.stderr.write(
+            JSON.stringify({ error: str.trim() }, null, 2) + "\n"
+          );
+        } else {
+          process.stderr.write(str);
+        }
+      },
+    });
 
   registerAuthCommands(program);
   registerPostCommands(program);

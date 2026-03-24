@@ -71,13 +71,13 @@ export async function resolvePost(
   // URL
   const urlMatch = identifier.match(/^https?:\/\/[^/]+\/@([^/]+)\/([^/?#]+)/);
   if (urlMatch) {
-    return getPostBySlugs(urlMatch[1], urlMatch[2]);
+    return getPostBySlugs(urlMatch[1], urlMatch[2], apiKey);
   }
 
   // @pub-slug/post-slug
   const slugMatch = identifier.match(/^@([^/]+)\/(.+)$/);
   if (slugMatch) {
-    return getPostBySlugs(slugMatch[1], slugMatch[2]);
+    return getPostBySlugs(slugMatch[1], slugMatch[2], apiKey);
   }
 
   // Plain ID
@@ -86,9 +86,10 @@ export async function resolvePost(
 
 export async function getPostBySlugs(
   publicationSlug: string,
-  postSlug: string
+  postSlug: string,
+  apiKey?: string
 ): Promise<Record<string, unknown>> {
-  const client = createClient();
+  const client = createClient(apiKey);
   const post = await client.posts
     .get({ publicationSlug, postSlug }, { includeContent: true })
     .single();
@@ -97,9 +98,10 @@ export async function getPostBySlugs(
 
 export async function getPostByPubIdAndSlug(
   publicationId: string,
-  postSlug: string
+  postSlug: string,
+  apiKey?: string
 ): Promise<Record<string, unknown>> {
-  const client = createClient();
+  const client = createClient(apiKey);
   const post = await client.posts
     .get({ publicationId, postSlug }, { includeContent: true })
     .single();
@@ -146,6 +148,7 @@ export async function createPost(params: {
   const body: Record<string, unknown> = {
     title: params.title,
     markdown: params.markdown,
+    status: "draft",
   };
   if (params.subtitle) body.subtitle = params.subtitle;
   if (params.tags) body.categories = params.tags;
