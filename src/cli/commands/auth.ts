@@ -38,7 +38,8 @@ async function loginWithBrowser(): Promise<string> {
     `\n  Open this URL in your browser to log in:\n\n` +
       `  ${pc.bold(pc.underline(session.verificationUrl))}\n\n`
   );
-  await openBrowser(session.verificationUrl);
+  // Don't block on browser open — user already has the URL
+  openBrowser(session.verificationUrl).catch(() => {});
   process.stderr.write("Waiting for authentication...\n");
   return waitForLogin(session.sessionId);
 }

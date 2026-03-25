@@ -206,17 +206,20 @@ export async function updatePost(
   if (params.markdown) body.markdown = params.markdown;
   if (params.tags) body.categories = params.tags;
 
-  if (isSlug(idOrSlug)) {
-    await client.posts.update({
-      slug: idOrSlug,
-      ...body,
-    } as Parameters<typeof client.posts.update>[0]);
-  } else {
+  // Try ID-first to avoid slug/ID ambiguity (short IDs like "abc123" match isSlug)
+  try {
     await client.posts.update({
       id: idOrSlug,
       ...body,
     } as Parameters<typeof client.posts.update>[0]);
+    return;
+  } catch {
+    if (!isSlug(idOrSlug)) throw new Error(`Post not found: ${idOrSlug}`);
   }
+  await client.posts.update({
+    slug: idOrSlug,
+    ...body,
+  } as Parameters<typeof client.posts.update>[0]);
 }
 
 export async function sendTestEmail(
@@ -232,11 +235,14 @@ export async function deletePost(
   apiKey: string
 ): Promise<void> {
   const client = createClient(apiKey);
-  if (isSlug(idOrSlug)) {
-    await client.posts.delete({ slug: idOrSlug });
-  } else {
+  // Try ID-first to avoid slug/ID ambiguity
+  try {
     await client.posts.delete({ id: idOrSlug });
+    return;
+  } catch {
+    if (!isSlug(idOrSlug)) throw new Error(`Post not found: ${idOrSlug}`);
   }
+  await client.posts.delete({ slug: idOrSlug });
 }
 
 export async function updatePostStatus(
@@ -249,15 +255,18 @@ export async function updatePostStatus(
   const body: Record<string, unknown> = { status };
   if (sendNewsletter) body.sendNewsletter = true;
 
-  if (isSlug(idOrSlug)) {
-    await client.posts.update({
-      slug: idOrSlug,
-      ...body,
-    } as Parameters<typeof client.posts.update>[0]);
-  } else {
+  // Try ID-first to avoid slug/ID ambiguity
+  try {
     await client.posts.update({
       id: idOrSlug,
       ...body,
     } as Parameters<typeof client.posts.update>[0]);
+    return;
+  } catch {
+    if (!isSlug(idOrSlug)) throw new Error(`Post not found: ${idOrSlug}`);
   }
+  await client.posts.update({
+    slug: idOrSlug,
+    ...body,
+  } as Parameters<typeof client.posts.update>[0]);
 }

@@ -6,29 +6,21 @@ import { outputData, outputTable, writeSuccess, writeInfo, parseLimit } from "..
 import { handleError } from "../lib/error.js";
 import { readStdin } from "../lib/stdin.js";
 import { confirm } from "../lib/prompt.js";
-
-function formatDate(p: Record<string, unknown>): string {
-  const raw = (p.publishedAt || p.createdAt || p.updatedAt) as string | undefined;
-  if (!raw) return "";
-  const n = Number(raw);
-  const date = isNaN(n) ? new Date(raw) : new Date(n);
-  return isNaN(date.getTime()) ? "" : date.toLocaleDateString();
-}
+import { requireArg, formatDate } from "../lib/args.js";
 
 async function resolveMarkdown(opts: {
   text?: string;
   file?: string;
 }): Promise<string | undefined> {
   if (opts.text) return opts.text;
-  if (opts.file) return fs.readFileSync(opts.file, "utf-8");
+  if (opts.file) {
+    if (!fs.existsSync(opts.file)) {
+      throw new Error(`File not found: ${opts.file}`);
+    }
+    return fs.readFileSync(opts.file, "utf-8");
+  }
   const stdin = await readStdin();
   return stdin || undefined;
-}
-
-function requireArg(positional: string | undefined, flag: string | undefined, name: string): string {
-  const value = positional || flag;
-  if (!value) throw new Error(`Missing ${name}. Pass it as an argument or with --id.`);
-  return value;
 }
 
 export function registerPostCommands(program: Command): void {
@@ -208,6 +200,9 @@ Examples:
           const id = requireArg(idOrSlug, opts.id, "post ID or slug");
           const apiKey = requireApiKey();
           const markdown = await resolveMarkdown(opts);
+          if (!opts.title && !opts.subtitle && !markdown && !opts.tags) {
+            throw new Error("Nothing to update. Provide --title, --subtitle, --text, --file, or --tags.");
+          }
           await posts.updatePost(id, {
             apiKey,
             title: opts.title,
@@ -272,7 +267,7 @@ Examples:
             const ok = await confirm(`Delete post "${id}"?`);
             if (!ok) {
               process.stderr.write("Aborted.\n");
-              process.exit(2);
+              process.exit(1);
             }
           }
           const apiKey = requireApiKey();
@@ -298,8 +293,7 @@ Examples:
   $ paragraph post by-tag defi --limit 20 --json`)
     .action(async function (this: Command, positionalTag: string | undefined, opts) {
       try {
-        const tag = positionalTag || opts.tag;
-        if (!tag) throw new Error("Missing tag. Pass it as an argument or with --tag.");
+        const tag = requireArg(positionalTag, opts.tag, "tag", "--tag");
         const result = await posts.getPostsByTag(tag, {
           limit: parseLimit(opts.limit),
           cursor: opts.cursor,
@@ -337,7 +331,7 @@ Examples:
     .action(async function (this: Command, opts) {
       try {
         const result = await posts.getFeed({
-          limit: parseLimit(opts.limit),
+          limit: parseLimit(opts.limit, 60),
           cursor: opts.cursor,
         });
         outputTable(

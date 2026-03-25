@@ -26,9 +26,14 @@ export async function waitForLogin(sessionId: string, signal?: AbortSignal): Pro
     let status;
     try {
       status = await pollLoginSession(sessionId);
-    } catch {
-      // Session was likely deleted (denied) — poll returns 404
-      throw new Error("Login was denied or expired. Please try again.");
+    } catch (err) {
+      const msg = err instanceof Error ? err.message : String(err);
+      // 404 means session was denied/deleted; other errors are transient
+      if (msg.includes("404") || msg.includes("Not found")) {
+        throw new Error("Login was denied or expired. Please try again.");
+      }
+      // Transient network error — keep polling
+      continue;
     }
 
     if (status.status === "completed" && status.apiKey) {

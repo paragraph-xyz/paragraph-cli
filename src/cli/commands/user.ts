@@ -2,6 +2,7 @@ import { Command } from "commander";
 import { getUser } from "../../services/users.js";
 import { outputData } from "../lib/output.js";
 import { handleError } from "../lib/error.js";
+import { requireArg } from "../lib/args.js";
 
 export function registerUserCommands(program: Command): void {
   const user = program.command("user").description("Look up users");
@@ -17,8 +18,7 @@ Examples:
   $ paragraph user get abc123 --json`)
     .action(async function (this: Command, positionalId: string | undefined, opts) {
       try {
-        const id = positionalId || opts.id;
-        if (!id) throw new Error("Missing user ID or wallet. Pass it as an argument or with --id.");
+        const id = requireArg(positionalId, opts.id, "user ID or wallet");
         const data = await getUser(id);
         outputData(
           this,

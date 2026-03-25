@@ -46,15 +46,22 @@ git push && git push --tags
 
 # Publish to npm
 echo "=> Publishing to npm..."
-npm publish
+if ! npm publish; then
+  echo ""
+  echo "ERROR: npm publish failed. The git tag $NEW_VERSION has been pushed."
+  echo "To retry: npm publish"
+  echo "To rollback: git tag -d $NEW_VERSION && git push origin :refs/tags/$NEW_VERSION && git reset --hard HEAD~1 && git push --force"
+  exit 1
+fi
 
-# Create GitHub release with tarball
+# Use the npm tarball for the GitHub release (includes dist/, unlike git archive)
 echo "=> Creating GitHub release..."
-TARBALL="paragraph-cli-${NEW_VERSION}.tar.gz"
-git archive --format=tar.gz --prefix="paragraph-cli-${NEW_VERSION}/" HEAD -o "$TARBALL"
-SHA256="$(shasum -a 256 "$TARBALL" | awk '{print $1}')"
+NPM_TARBALL="$(npm pack)"
+SHA256="$(openssl dgst -sha256 "$NPM_TARBALL" | awk '{print $NF}')"
+RELEASE_TARBALL="paragraph-cli-${NEW_VERSION}.tgz"
+mv "$NPM_TARBALL" "$RELEASE_TARBALL"
 
-gh release create "$NEW_VERSION" "$TARBALL" \
+if ! gh release create "$NEW_VERSION" "$RELEASE_TARBALL" \
   --title "$NEW_VERSION" \
   --notes "## Install
 
@@ -67,9 +74,15 @@ brew tap paragraph-com/tap
 brew install paragraph
 \`\`\`
 
-**sha256:** \`$SHA256\`"
+**sha256:** \`$SHA256\`"; then
+  echo ""
+  echo "ERROR: GitHub release creation failed. npm package was published successfully."
+  echo "To retry: gh release create $NEW_VERSION $RELEASE_TARBALL --title $NEW_VERSION"
+  rm -f "$RELEASE_TARBALL"
+  exit 1
+fi
 
-TARBALL_URL="https://github.com/paragraph-xyz/paragraph-cli/releases/download/${NEW_VERSION}/${TARBALL}"
+TARBALL_URL="https://github.com/paragraph-xyz/paragraph-cli/releases/download/${NEW_VERSION}/${RELEASE_TARBALL}"
 
 # Update Homebrew formula
 echo "=> Updating Homebrew formula..."
@@ -91,7 +104,7 @@ class Paragraph < Formula
   sha256 "$SHA256"
   license "MIT"
 
-  depends_on "node@22"
+  depends_on "node"
 
   def install
     system "npm", "install", *std_npm_args
@@ -109,12 +122,10 @@ RUBY
   git add -A
   git commit -m "paragraph ${NEW_VERSION}"
   git push
-)
+) || echo "WARNING: Homebrew formula update failed. Update manually."
 
 rm -rf "$FORMULA_DIR"
-
-# Clean up tarball
-rm -f "$TARBALL"
+rm -f "$RELEASE_TARBALL"
 
 echo ""
 echo "=> Released $NEW_VERSION"

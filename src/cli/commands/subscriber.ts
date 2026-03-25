@@ -3,6 +3,7 @@ import { requireApiKey } from "../../services/auth.js";
 import * as subscribers from "../../services/subscribers.js";
 import { outputData, outputTable, writeSuccess, writeInfo, parseLimit } from "../lib/output.js";
 import { handleError } from "../lib/error.js";
+import { requireArg, formatDate } from "../lib/args.js";
 
 export function registerSubscriberCommands(program: Command): void {
   const subscriber = program
@@ -33,9 +34,7 @@ Examples:
           result.items.map((s) => [
             String(s.email || ""),
             String(s.walletAddress || ""),
-            s.createdAt
-              ? new Date(s.createdAt as string).toLocaleDateString()
-              : "",
+            formatDate(s),
           ]),
           result.items,
           { cursor: result.cursor }
@@ -59,8 +58,7 @@ Examples:
   $ paragraph subscriber count abc123 --json`)
     .action(async function (this: Command, positionalId: string | undefined, opts) {
       try {
-        const id = positionalId || opts.publication;
-        if (!id) throw new Error("Missing publication ID. Pass it as an argument or with --publication.");
+        const id = requireArg(positionalId, opts.publication, "publication ID", "--publication");
         const count = await subscribers.getSubscriberCount(id);
         outputData(this, { Count: count }, { count });
       } catch (err) {

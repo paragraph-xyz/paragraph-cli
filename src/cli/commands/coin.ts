@@ -2,6 +2,7 @@ import { Command } from "commander";
 import * as coins from "../../services/coins.js";
 import { outputData, outputTable, writeInfo, parseLimit } from "../lib/output.js";
 import { handleError } from "../lib/error.js";
+import { requireArg } from "../lib/args.js";
 
 export function registerCoinCommands(program: Command): void {
   const coin = program.command("coin").description("Manage coins");
@@ -17,8 +18,7 @@ Examples:
   $ paragraph coin get abc123 --json`)
     .action(async function (this: Command, positionalId: string | undefined, opts) {
       try {
-        const id = positionalId || opts.id;
-        if (!id) throw new Error("Missing coin ID or address. Pass it as an argument or with --id.");
+        const id = requireArg(positionalId, opts.id, "coin ID or address");
         const data = await coins.getCoin(id);
         const metadata = data.metadata as
           | Record<string, unknown>
@@ -51,16 +51,14 @@ Examples:
   $ paragraph coin popular --json | jq '.data[].contractAddress'`)
     .action(async function (this: Command, opts) {
       try {
-        const limit = parseLimit(opts.limit);
         const result = await coins.getPopularCoins({
-          limit,
+          limit: parseLimit(opts.limit),
           cursor: opts.cursor,
         });
-        const items = result.items.slice(0, limit);
         outputTable(
           this,
           ["Name", "Ticker", "Contract"],
-          items.map((c) => {
+          result.items.map((c) => {
             const metadata = c.metadata as Record<string, unknown> | undefined;
             return [
               String(metadata?.name || c.name || ""),
@@ -68,7 +66,7 @@ Examples:
               String(c.contractAddress || ""),
             ];
           }),
-          items,
+          result.items,
           { cursor: result.cursor }
         );
         if (result.cursor) {
@@ -122,8 +120,7 @@ Examples:
   $ paragraph coin holders abc123 --limit 50 --json`)
     .action(async function (this: Command, positionalId: string | undefined, opts) {
       try {
-        const id = positionalId || opts.id;
-        if (!id) throw new Error("Missing coin ID or address. Pass it as an argument or with --id.");
+        const id = requireArg(positionalId, opts.id, "coin ID or address");
         const result = await coins.getCoinHolders(id, {
           limit: parseLimit(opts.limit),
           cursor: opts.cursor,
@@ -158,8 +155,7 @@ Examples:
   $ paragraph coin quote abc123 --amount 1000000000000000000 --json`)
     .action(async function (this: Command, positionalId: string | undefined, opts) {
       try {
-        const id = positionalId || opts.id;
-        if (!id) throw new Error("Missing coin ID or address. Pass it as an argument or with --id.");
+        const id = requireArg(positionalId, opts.id, "coin ID or address");
         const result = await coins.getCoinQuote(id, opts.amount);
         outputData(this, result, result);
       } catch (err) {

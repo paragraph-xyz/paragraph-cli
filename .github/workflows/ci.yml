@@ -19,5 +19,7 @@ jobs:
           node-version: ${{ matrix.node-version }}
           cache: npm
       - run: npm ci
+      - run: npx tsc --noEmit
       - run: npm run build
+      - run: node dist/index.js --version
       - run: npm test

@@ -3,6 +3,7 @@ import { getApiKey } from "../../services/auth.js";
 import { resolvePublication } from "../../services/publications.js";
 import { outputData } from "../lib/output.js";
 import { handleError } from "../lib/error.js";
+import { requireArg } from "../lib/args.js";
 
 export function registerPublicationCommands(program: Command): void {
   const publication = program
@@ -20,8 +21,7 @@ Examples:
   $ paragraph publication get my-blog --json`)
     .action(async function (this: Command, identifier: string | undefined, opts) {
       try {
-        const id = identifier || opts.id;
-        if (!id) throw new Error("Missing identifier. Pass it as an argument or with --id.");
+        const id = requireArg(identifier, opts.id, "identifier");
         const pub = await resolvePublication(id, getApiKey());
         outputData(
           this,

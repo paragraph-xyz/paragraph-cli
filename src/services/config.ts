@@ -28,15 +28,21 @@ export function writeConfig(update: Config): void {
   const existing = readConfig();
   const merged = { ...existing, ...update };
   fs.mkdirSync(dir, { recursive: true, mode: 0o700 });
-  fs.writeFileSync(getConfigPath(), JSON.stringify(merged, null, 2) + "\n", {
+  const configPath = getConfigPath();
+  fs.writeFileSync(configPath, JSON.stringify(merged, null, 2) + "\n", {
     mode: 0o600,
   });
+  // Enforce permissions even if the file already existed
+  fs.chmodSync(configPath, 0o600);
 }
 
 export function deleteConfig(): void {
   try {
     fs.unlinkSync(getConfigPath());
-  } catch {
-    // ignore if not exists
+  } catch (err) {
+    // Only ignore "file not found" errors
+    if ((err as NodeJS.ErrnoException).code !== "ENOENT") {
+      throw err;
+    }
   }
 }
