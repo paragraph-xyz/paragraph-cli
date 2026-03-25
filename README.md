@@ -46,8 +46,8 @@ paragraph login --token <your-api-key>
 # Pipe token from stdin (useful for CI/agents)
 echo "<your-api-key>" | paragraph login --with-token
 
-# Environment variable (no login needed)
-export PARAGRAPH_API_KEY=<your-api-key>
+# Or skip login — pass the key per-command via env var
+PARAGRAPH_API_KEY=<your-api-key> paragraph post list
 
 # Verify
 paragraph whoami
