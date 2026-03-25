@@ -2,30 +2,35 @@
 
 Command-line interface for [Paragraph](https://paragraph.com). Designed for both human and programmatic (agent) usage.
 
-## Installation
+## Install
 
 ```bash
-npm install
-npm run build
-npm link
-
-paragraph --help
+npm install -g @paragraph-com/cli
 ```
 
-## Interactive TUI
-
-Running `paragraph` with no arguments launches an interactive terminal UI with menus, scrollable lists, and keyboard navigation:
+Or via Homebrew:
 
 ```bash
-paragraph
+brew tap paragraph-com/tap && brew install paragraph
 ```
 
-The TUI supports browsing posts, managing subscribers, searching, and more — all from the terminal. Press `esc` to go back, arrow keys to scroll lists, and `Ctrl+C` to exit.
+## Quick start
 
-The TUI is disabled automatically when:
-- `--json`, `--help`, or `--version` flags are used
-- stdout is not a TTY (e.g., piped output)
-- `CI=true` or `PARAGRAPH_NON_INTERACTIVE=1` is set
+```bash
+# Authenticate
+paragraph login
+
+# Create a post
+paragraph post create --title "My Post" --file ./draft.md
+
+# Publish it
+paragraph post publish my-post
+
+# List your posts
+paragraph post list
+```
+
+Run `paragraph --help` to see all commands, or `paragraph <command> --help` for details on any command.
 
 ## Authentication
 
@@ -95,6 +100,10 @@ paragraph post publish <id-or-slug> --newsletter     # publish + send email to s
 paragraph post draft <id-or-slug>                    # revert to draft
 paragraph post archive <id-or-slug>                  # archive
 
+# Preview before acting
+paragraph post publish <id-or-slug> --dry-run
+paragraph post delete <id-or-slug> --dry-run
+
 # Send test newsletter email (draft only)
 paragraph post test-email <id>
 
@@ -153,9 +162,18 @@ paragraph user get <user-id>
 paragraph user get 0x1234...    # by wallet address
 ```
 
-## Agent / Programmatic Usage
+## Interactive TUI
 
-The CLI is designed for use by AI agents and scripts. Key features:
+Running `paragraph` with no arguments launches an interactive terminal UI with menus, scrollable lists, and keyboard navigation.
+
+The TUI is disabled automatically when:
+- `--json`, `--help`, or `--version` flags are used
+- stdout is not a TTY (e.g., piped output)
+- `CI=true` or `PARAGRAPH_NON_INTERACTIVE=1` is set
+
+## Agent / programmatic usage
+
+The CLI is designed for use by AI agents and scripts.
 
 ### JSON output
 
@@ -167,7 +185,7 @@ paragraph --json post get <id> | jq '.markdown'
 paragraph --json search post --query "web3" | jq '.length'
 ```
 
-Paginated commands return structured output with pagination metadata:
+Paginated commands return:
 
 ```json
 {
@@ -188,43 +206,30 @@ In `--json` mode, errors are structured JSON on **stderr** with a non-zero exit 
 
 ```json
 { "error": "Not found.", "code": "NOT_FOUND", "status": 404 }
-{ "error": "Unauthorized. Check your API key or run `paragraph login`.", "code": "UNAUTHORIZED", "status": 401 }
-{ "error": "Rate limited. Please wait and try again.", "code": "RATE_LIMITED", "status": 429 }
 ```
 
 Error codes: `UNAUTHORIZED`, `FORBIDDEN`, `NOT_FOUND`, `RATE_LIMITED`, `SERVER_ERROR`, `REQUEST_FAILED`, `CLIENT_ERROR`, `UNKNOWN`.
 
-### Field extraction
+### Flags and stdin
 
-Use `--field` to extract a single value from any `post get` result -- outputs raw content to stdout with no formatting:
-
-```bash
-# Download post content as markdown
-paragraph post get <id> --field markdown > post.md
-
-# Get just the title
-title=$(paragraph post get <id> --field title)
-```
-
-### Pagination
-
-List commands support `--limit` (clamped to 1-100) and `--cursor` for pagination:
+Every identifier accepts both a positional argument and an `--id` flag, so you can chain commands:
 
 ```bash
-# First page
-paragraph --json post list --publication yearn --limit 10
-
-# Subsequent pages (use cursor from previous response)
-paragraph --json post list --publication yearn --limit 10 --cursor <cursor>
+paragraph post get --id $(paragraph --json post list | jq -r '.data[0].id')
 ```
 
-In `--json` mode, the cursor is included in the response under `pagination.cursor`. In human mode, it's printed to stderr.
+Content can come from `--text`, `--file`, or stdin:
+
+```bash
+cat draft.md | paragraph post create --title "My Post"
+```
 
 ### Non-interactive safety
 
-- `delete` requires `--yes` in non-TTY environments (exits with error otherwise)
+- `delete` requires `--yes` in non-TTY environments
 - `login` supports `--with-token` for stdin piping and `--token` for direct input
-- Set `PARAGRAPH_NON_INTERACTIVE=1` or `CI=true` to force CLI mode (no TUI)
+- Destructive commands support `--dry-run` to preview without acting
+- Set `PARAGRAPH_NON_INTERACTIVE=1` or `CI=true` to force CLI mode
 
 ### Environment variables
 
@@ -235,11 +240,27 @@ In `--json` mode, the cursor is included in the response under `pagination.curso
 | `PARAGRAPH_NON_INTERACTIVE` | Set to `1` to disable TUI |
 | `CI` | Set to `true` to disable TUI |
 
+---
+
 ## Development
 
 ```bash
-npm run build       # build once
+git clone https://github.com/paragraph-xyz/paragraph-cli.git
+cd paragraph-cli
+npm install
+npm run build
 npm run dev         # watch mode
+npm test
 ```
 
 Requires Node.js >= 18.
+
+## Releasing
+
+```bash
+npm run release patch   # 0.1.0 → 0.1.1
+npm run release minor   # 0.1.0 → 0.2.0
+npm run release major   # 0.1.0 → 1.0.0
+```
+
+Builds, tests, publishes to npm, creates a GitHub release, and updates the Homebrew tap. Requires `gh` CLI and npm publish access.

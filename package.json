@@ -12,6 +12,8 @@
     "url": "https://github.com/paragraph-xyz/paragraph-cli/issues"
   },
   "license": "MIT",
+  "author": "Paragraph (https://paragraph.com)",
+  "keywords": ["cli", "paragraph", "newsletter", "web3", "blockchain", "publishing"],
   "bin": {
     "paragraph": "./dist/index.js"
   },
@@ -25,7 +27,9 @@
     "build": "tsup",
     "dev": "tsup --watch",
     "test": "vitest run",
-    "test:watch": "vitest"
+    "test:watch": "vitest",
+    "prepublishOnly": "npm run build && npm test",
+    "release": "scripts/release.sh"
   },
   "engines": {
     "node": ">=18"
