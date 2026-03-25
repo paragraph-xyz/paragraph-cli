@@ -49,6 +49,11 @@ export function registerAuthCommands(program: Command): void {
     .description("Authenticate with Paragraph")
     .option("--token <token>", "API key (skips interactive prompt)")
     .option("--with-token", "Read API key from stdin")
+    .addHelpText("after", `
+Examples:
+  $ paragraph login
+  $ paragraph login --token pk_abc123
+  $ echo "pk_abc123" | paragraph login --with-token`)
     .action(async (opts) => {
       try {
         let token: string;
@@ -109,6 +114,9 @@ export function registerAuthCommands(program: Command): void {
   program
     .command("logout")
     .description("Remove stored API key")
+    .addHelpText("after", `
+Examples:
+  $ paragraph logout`)
     .action(async () => {
       try {
         deleteConfig();
@@ -121,6 +129,10 @@ export function registerAuthCommands(program: Command): void {
   program
     .command("whoami")
     .description("Show the current authenticated publication")
+    .addHelpText("after", `
+Examples:
+  $ paragraph whoami
+  $ paragraph whoami --json`)
     .action(async function (this: Command) {
       try {
         const apiKey = requireApiKey();

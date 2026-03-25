@@ -7,11 +7,19 @@ export function registerCoinCommands(program: Command): void {
   const coin = program.command("coin").description("Manage coins");
 
   coin
-    .command("get <id-or-address>")
+    .command("get [id-or-address]")
     .description("Get coin details")
-    .action(async function (this: Command, idOrAddress: string) {
+    .option("--id <id-or-address>", "Coin ID or contract address")
+    .addHelpText("after", `
+Examples:
+  $ paragraph coin get abc123
+  $ paragraph coin get --id 0x1234...abcd
+  $ paragraph coin get abc123 --json`)
+    .action(async function (this: Command, positionalId: string | undefined, opts) {
       try {
-        const data = await coins.getCoin(idOrAddress);
+        const id = positionalId || opts.id;
+        if (!id) throw new Error("Missing coin ID or address. Pass it as an argument or with --id.");
+        const data = await coins.getCoin(id);
         const metadata = data.metadata as
           | Record<string, unknown>
           | undefined;
@@ -36,6 +44,11 @@ export function registerCoinCommands(program: Command): void {
     .description("List popular coins")
     .option("--limit <n>", "Max number of results (1-100)", "10")
     .option("--cursor <cursor>", "Pagination cursor from a previous request")
+    .addHelpText("after", `
+Examples:
+  $ paragraph coin popular
+  $ paragraph coin popular --limit 20
+  $ paragraph coin popular --json | jq '.data[].contractAddress'`)
     .action(async function (this: Command, opts) {
       try {
         const limit = parseLimit(opts.limit);
@@ -70,6 +83,10 @@ export function registerCoinCommands(program: Command): void {
     .command("search")
     .description("Search for coins")
     .requiredOption("--query <q>", "Search query")
+    .addHelpText("after", `
+Examples:
+  $ paragraph coin search --query "ethereum"
+  $ paragraph coin search --query "eth" --json`)
     .action(async function (this: Command, opts) {
       try {
         const items = await coins.searchCoins(opts.query);
@@ -93,13 +110,21 @@ export function registerCoinCommands(program: Command): void {
     });
 
   coin
-    .command("holders <id-or-address>")
+    .command("holders [id-or-address]")
     .description("List coin holders")
+    .option("--id <id-or-address>", "Coin ID or contract address")
     .option("--limit <n>", "Max number of results (1-100)", "10")
     .option("--cursor <cursor>", "Pagination cursor from a previous request")
-    .action(async function (this: Command, idOrAddress: string, opts) {
+    .addHelpText("after", `
+Examples:
+  $ paragraph coin holders abc123
+  $ paragraph coin holders --id 0x1234...abcd
+  $ paragraph coin holders abc123 --limit 50 --json`)
+    .action(async function (this: Command, positionalId: string | undefined, opts) {
       try {
-        const result = await coins.getCoinHolders(idOrAddress, {
+        const id = positionalId || opts.id;
+        if (!id) throw new Error("Missing coin ID or address. Pass it as an argument or with --id.");
+        const result = await coins.getCoinHolders(id, {
           limit: parseLimit(opts.limit),
           cursor: opts.cursor,
         });
@@ -122,12 +147,20 @@ export function registerCoinCommands(program: Command): void {
     });
 
   coin
-    .command("quote <id-or-address>")
+    .command("quote [id-or-address]")
     .description("Get a price quote for a coin")
+    .option("--id <id-or-address>", "Coin ID or contract address")
     .requiredOption("--amount <wei>", "Amount of ETH in wei")
-    .action(async function (this: Command, idOrAddress: string, opts) {
+    .addHelpText("after", `
+Examples:
+  $ paragraph coin quote abc123 --amount 1000000000000000000
+  $ paragraph coin quote --id 0x1234...abcd --amount 1000000000000000000
+  $ paragraph coin quote abc123 --amount 1000000000000000000 --json`)
+    .action(async function (this: Command, positionalId: string | undefined, opts) {
       try {
-        const result = await coins.getCoinQuote(idOrAddress, opts.amount);
+        const id = positionalId || opts.id;
+        if (!id) throw new Error("Missing coin ID or address. Pass it as an argument or with --id.");
+        const result = await coins.getCoinQuote(id, opts.amount);
         outputData(this, result, result);
       } catch (err) {
         handleError(err);

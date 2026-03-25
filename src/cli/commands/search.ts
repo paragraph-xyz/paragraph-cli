@@ -12,6 +12,10 @@ export function registerSearchCommands(program: Command): void {
     .command("post")
     .description("Search for posts")
     .requiredOption("--query <q>", "Search query")
+    .addHelpText("after", `
+Examples:
+  $ paragraph search post --query "ethereum merge"
+  $ paragraph search post --query "web3" --json | jq '.data[].post.title'`)
     .action(async function (this: Command, opts) {
       try {
         const items = await searchPosts(opts.query);
@@ -38,6 +42,10 @@ export function registerSearchCommands(program: Command): void {
     .command("blog")
     .description("Search for blogs")
     .requiredOption("--query <q>", "Search query")
+    .addHelpText("after", `
+Examples:
+  $ paragraph search blog --query "defi"
+  $ paragraph search blog --query "nft" --json`)
     .action(async function (this: Command, opts) {
       try {
         const items = await searchBlogs(opts.query);

@@ -23,7 +23,9 @@
   },
   "scripts": {
     "build": "tsup",
-    "dev": "tsup --watch"
+    "dev": "tsup --watch",
+    "test": "vitest run",
+    "test:watch": "vitest"
   },
   "engines": {
     "node": ">=18"
@@ -41,6 +43,7 @@
     "@types/node": "^20.0.0",
     "@types/react": "^18.3.0",
     "tsup": "^8.3.5",
-    "typescript": "^5.0.0"
+    "typescript": "^5.0.0",
+    "vitest": "^4.1.1"
   }
 }

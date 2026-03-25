@@ -84,6 +84,36 @@ export async function resolvePost(
   return getPost(identifier, apiKey);
 }
 
+/**
+ * Like resolvePost, but also handles bare slugs (e.g. "my-post") by
+ * looking up the authenticated user's publication first.
+ */
+export async function resolveOwnPost(
+  idOrSlug: string,
+  apiKey: string
+): Promise<Record<string, unknown>> {
+  // If it doesn't look like a bare slug, use the standard resolver
+  if (!isSlug(idOrSlug) || idOrSlug.includes("/") || idOrSlug.startsWith("http")) {
+    return resolvePost(idOrSlug, apiKey);
+  }
+
+  // Try as an ID first (short IDs can match the slug regex)
+  try {
+    return await getPost(idOrSlug, apiKey);
+  } catch {
+    // Fall through to slug resolution
+  }
+
+  // Resolve via the authenticated user's publication
+  const { validateApiKey } = await import("./auth.js");
+  const pub = await validateApiKey(apiKey);
+  const pubSlug = pub.slug;
+  if (!pubSlug) {
+    throw new Error(`Post not found: ${idOrSlug}`);
+  }
+  return getPostBySlugs(pubSlug, idOrSlug, apiKey);
+}
+
 export async function getPostBySlugs(
   publicationSlug: string,
   postSlug: string,

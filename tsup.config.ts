@@ -1,13 +1,19 @@
 import { defineConfig } from "tsup";
 import { builtinModules } from "module";
+import { readFileSync } from "fs";
 
 const nodeExternals = [
   ...builtinModules,
   ...builtinModules.map((m) => `node:${m}`),
 ];
 
+const pkg = JSON.parse(readFileSync("./package.json", "utf-8"));
+
 export default defineConfig({
   entry: ["src/index.ts"],
+  define: {
+    "process.env.CLI_VERSION": JSON.stringify(pkg.version),
+  },
   format: ["esm"],
   splitting: false,
   sourcemap: true,

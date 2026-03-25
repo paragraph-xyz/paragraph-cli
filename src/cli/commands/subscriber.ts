@@ -14,6 +14,12 @@ export function registerSubscriberCommands(program: Command): void {
     .description("List subscribers")
     .option("--limit <n>", "Max number of results (1-100)", "10")
     .option("--cursor <cursor>", "Pagination cursor from a previous request")
+    .addHelpText("after", `
+Examples:
+  $ paragraph subscriber list
+  $ paragraph subscriber list --limit 50
+  $ paragraph subscriber list --json | jq '.data[].email'
+  $ paragraph subscriber list --cursor <cursor-from-previous>`)
     .action(async function (this: Command, opts) {
       try {
         const apiKey = requireApiKey();
@@ -43,11 +49,19 @@ export function registerSubscriberCommands(program: Command): void {
     });
 
   subscriber
-    .command("count <publication-id>")
+    .command("count [publication-id]")
     .description("Get subscriber count for a publication")
-    .action(async function (this: Command, publicationId: string) {
+    .option("--publication <id>", "Publication ID")
+    .addHelpText("after", `
+Examples:
+  $ paragraph subscriber count abc123
+  $ paragraph subscriber count --publication abc123
+  $ paragraph subscriber count abc123 --json`)
+    .action(async function (this: Command, positionalId: string | undefined, opts) {
       try {
-        const count = await subscribers.getSubscriberCount(publicationId);
+        const id = positionalId || opts.publication;
+        if (!id) throw new Error("Missing publication ID. Pass it as an argument or with --publication.");
+        const count = await subscribers.getSubscriberCount(id);
         outputData(this, { Count: count }, { count });
       } catch (err) {
         handleError(err);
@@ -58,11 +72,16 @@ export function registerSubscriberCommands(program: Command): void {
     .command("add")
     .description("Add a subscriber")
     .requiredOption("--email <email>", "Subscriber email address")
+    .addHelpText("after", `
+Examples:
+  $ paragraph subscriber add --email user@example.com
+  $ paragraph subscriber add --email user@example.com --json`)
     .action(async function (this: Command, opts) {
       try {
         const apiKey = requireApiKey();
         await subscribers.addSubscriber(opts.email, apiKey);
         writeSuccess(`Subscriber added: ${opts.email}`);
+        outputData(this, { Email: opts.email }, { email: opts.email, added: true });
       } catch (err) {
         handleError(err);
       }
@@ -72,11 +91,16 @@ export function registerSubscriberCommands(program: Command): void {
     .command("import")
     .description("Import subscribers from a CSV file")
     .requiredOption("--csv <file>", "Path to CSV file")
+    .addHelpText("after", `
+Examples:
+  $ paragraph subscriber import --csv ./subscribers.csv
+  $ paragraph subscriber import --csv ./subscribers.csv --json`)
     .action(async function (this: Command, opts) {
       try {
         const apiKey = requireApiKey();
         await subscribers.importSubscribers(opts.csv, apiKey);
         writeSuccess(`Subscribers imported from ${opts.csv}`);
+        outputData(this, { File: opts.csv }, { file: opts.csv, imported: true });
       } catch (err) {
         handleError(err);
       }

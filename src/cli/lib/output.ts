@@ -6,6 +6,16 @@ export function isJsonMode(cmd: Command): boolean {
   return cmd.optsWithGlobals().json === true;
 }
 
+export function isVerboseMode(cmd: Command): boolean {
+  return cmd.optsWithGlobals().verbose === true;
+}
+
+export function writeDebug(text: string): void {
+  if (process.argv.includes("--verbose")) {
+    process.stderr.write(pc.dim(`[debug] ${text}`) + "\n");
+  }
+}
+
 export function outputData(
   cmd: Command,
   data: Record<string, unknown>,

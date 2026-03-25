@@ -19,6 +19,10 @@ function isJsonMode(): boolean {
   return process.argv.includes("--json");
 }
 
+function isVerboseMode(): boolean {
+  return process.argv.includes("--verbose");
+}
+
 function errorCode(status?: number): string {
   if (!status) return "UNKNOWN";
   if (status === 401) return "UNAUTHORIZED";
@@ -60,6 +64,10 @@ export function handleError(err: unknown): never {
     process.stderr.write(JSON.stringify(json, null, 2) + "\n");
   } else {
     writeError(error.message);
+  }
+
+  if (isVerboseMode() && err instanceof Error && err.stack) {
+    process.stderr.write(err.stack + "\n");
   }
 
   process.exit(1);

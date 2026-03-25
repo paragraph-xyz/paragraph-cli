@@ -25,6 +25,12 @@ async function resolveMarkdown(opts: {
   return stdin || undefined;
 }
 
+function requireArg(positional: string | undefined, flag: string | undefined, name: string): string {
+  const value = positional || flag;
+  if (!value) throw new Error(`Missing ${name}. Pass it as an argument or with --id.`);
+  return value;
+}
+
 export function registerPostCommands(program: Command): void {
   const post = program.command("post").description("Manage posts");
 
@@ -38,6 +44,12 @@ export function registerPostCommands(program: Command): void {
       .option("--file <path>", "Read post content from a file")
       .option("--subtitle <subtitle>", "Post subtitle")
       .option("--tags <tags>", "Comma-separated tags")
+      .addHelpText("after", `
+Examples:
+  $ paragraph post create --title "My Post" --file ./post.md
+  $ paragraph post create --title "My Post" --text "# Hello World"
+  $ paragraph post create --title "My Post" --tags "web3,defi" --file ./post.md
+  $ cat draft.md | paragraph post create --title "My Post"`)
       .action(async function (this: Command, opts) {
         try {
           const apiKey = requireApiKey();
@@ -86,6 +98,13 @@ export function registerPostCommands(program: Command): void {
     )
     .option("--limit <n>", "Max number of results (1-100)", "10")
     .option("--cursor <cursor>", "Pagination cursor from a previous request")
+    .addHelpText("after", `
+Examples:
+  $ paragraph post list
+  $ paragraph post list --status draft --limit 20
+  $ paragraph post list --publication my-blog --limit 5
+  $ paragraph post list --json | jq '.data[].id'
+  $ paragraph post list --cursor <cursor-from-previous>`)
     .action(async function (this: Command, opts) {
       try {
         const apiKey = opts.publication ? getApiKey() : requireApiKey();
@@ -113,14 +132,24 @@ export function registerPostCommands(program: Command): void {
       }
     });
 
-  // get — accepts ID, URL, or @pub-slug/post-slug
+  // get
   post
-    .command("get <identifier>")
+    .command("get [identifier]")
     .description("Get a post by ID, URL, or @publication/slug")
+    .option("--id <identifier>", "Post ID, URL, or @publication/slug")
     .option("--field <name>", "Output a single field value (e.g., markdown, title)")
-    .action(async function (this: Command, identifier: string, opts) {
+    .addHelpText("after", `
+Examples:
+  $ paragraph post get abc123
+  $ paragraph post get --id abc123
+  $ paragraph post get @my-blog/my-post
+  $ paragraph post get https://paragraph.com/@my-blog/my-post
+  $ paragraph post get abc123 --field markdown > post.md
+  $ paragraph post get abc123 --json | jq '.title'`)
+    .action(async function (this: Command, identifier: string | undefined, opts) {
       try {
-        const data = await posts.resolvePost(identifier, getApiKey());
+        const id = requireArg(identifier, opts.id, "identifier");
+        const data = await posts.resolvePost(id, getApiKey());
 
         if (opts.field) {
           const value = data[opts.field];
@@ -159,18 +188,27 @@ export function registerPostCommands(program: Command): void {
   // update
   const updateCmd = (parent: Command) =>
     parent
-      .command("update <id-or-slug>")
+      .command("update [id-or-slug]")
       .description("Update a post")
+      .option("--id <id-or-slug>", "Post ID or slug")
       .option("--title <title>", "Post title")
       .option("--text <markdown>", "Post content as markdown string")
       .option("--file <path>", "Read post content from a file")
       .option("--subtitle <subtitle>", "Post subtitle")
       .option("--tags <tags>", "Comma-separated tags")
-      .action(async function (this: Command, idOrSlug: string, opts) {
+      .addHelpText("after", `
+Examples:
+  $ paragraph post update my-post --title "New Title"
+  $ paragraph post update --id my-post --title "New Title"
+  $ paragraph post update my-post --file ./updated.md
+  $ cat updated.md | paragraph post update my-post
+  $ paragraph post update my-post --tags "web3,defi" --json`)
+      .action(async function (this: Command, idOrSlug: string | undefined, opts) {
         try {
+          const id = requireArg(idOrSlug, opts.id, "post ID or slug");
           const apiKey = requireApiKey();
           const markdown = await resolveMarkdown(opts);
-          await posts.updatePost(idOrSlug, {
+          await posts.updatePost(id, {
             apiKey,
             title: opts.title,
             markdown,
@@ -179,7 +217,11 @@ export function registerPostCommands(program: Command): void {
               ?.split(",")
               .map((t: string) => t.trim()),
           });
-          writeSuccess(`Post updated: ${idOrSlug}`);
+          writeSuccess(`Post updated: ${id}`);
+          const result: Record<string, unknown> = { id, updated: true };
+          if (opts.title) result.title = opts.title;
+          if (opts.subtitle) result.subtitle = opts.subtitle;
+          outputData(this, { ID: id }, result);
         } catch (err) {
           handleError(err);
         }
@@ -188,26 +230,55 @@ export function registerPostCommands(program: Command): void {
   // delete
   const deleteCmd = (parent: Command) =>
     parent
-      .command("delete <id-or-slug>")
+      .command("delete [id-or-slug]")
       .description("Delete a post")
-      .option("--yes", "Skip confirmation prompt (required in non-interactive mode)")
-      .action(async function (this: Command, idOrSlug: string, opts) {
+      .option("--id <id-or-slug>", "Post ID or slug")
+      .option("--yes", "Skip confirmation prompt")
+      .option("--dry-run", "Preview what would be deleted without deleting")
+      .addHelpText("after", `
+Examples:
+  $ paragraph post delete my-post
+  $ paragraph post delete --id my-post
+  $ paragraph post delete my-post --yes
+  $ paragraph post delete my-post --dry-run
+  $ paragraph post delete my-post --json --yes`)
+      .action(async function (this: Command, idOrSlug: string | undefined, opts) {
         try {
+          const id = requireArg(idOrSlug, opts.id, "post ID or slug");
+
+          if (opts.dryRun) {
+            const apiKey = requireApiKey();
+            const data = await posts.resolveOwnPost(id, apiKey);
+            writeInfo(`Would delete post: ${data.title || id}`);
+            outputData(
+              this,
+              {
+                ID: (data.id || id) as string,
+                Title: data.title as string,
+                Slug: (data.slug || id) as string,
+                Action: "delete (dry-run)",
+              },
+              { ...data, dryRun: true }
+            );
+            return;
+          }
+
           if (!opts.yes) {
             if (!process.stdin.isTTY) {
               throw new Error(
                 "Cannot confirm deletion in non-interactive mode. Use --yes to confirm."
               );
             }
-            const ok = await confirm(`Delete post "${idOrSlug}"?`);
+            const ok = await confirm(`Delete post "${id}"?`);
             if (!ok) {
               process.stderr.write("Aborted.\n");
               process.exit(2);
             }
           }
           const apiKey = requireApiKey();
-          await posts.deletePost(idOrSlug, apiKey);
-          writeSuccess(`Post deleted: ${idOrSlug}`);
+          await posts.deletePost(id, apiKey);
+          writeSuccess(`Post deleted: ${id}`);
+          outputData(this, { ID: id, Status: "deleted" }, { id, deleted: true });
         } catch (err) {
           handleError(err);
         }
@@ -215,12 +286,20 @@ export function registerPostCommands(program: Command): void {
 
   // posts by tag
   post
-    .command("by-tag <tag>")
+    .command("by-tag [tag]")
     .description("Get posts by tag")
+    .option("--tag <tag>", "Tag to filter by")
     .option("--limit <n>", "Max number of results (1-100)", "10")
     .option("--cursor <cursor>", "Pagination cursor from a previous request")
-    .action(async function (this: Command, tag: string, opts) {
+    .addHelpText("after", `
+Examples:
+  $ paragraph post by-tag web3
+  $ paragraph post by-tag --tag web3
+  $ paragraph post by-tag defi --limit 20 --json`)
+    .action(async function (this: Command, positionalTag: string | undefined, opts) {
       try {
+        const tag = positionalTag || opts.tag;
+        if (!tag) throw new Error("Missing tag. Pass it as an argument or with --tag.");
         const result = await posts.getPostsByTag(tag, {
           limit: parseLimit(opts.limit),
           cursor: opts.cursor,
@@ -250,6 +329,11 @@ export function registerPostCommands(program: Command): void {
     .description("Get the curated post feed")
     .option("--limit <n>", "Max number of results (1-60)", "20")
     .option("--cursor <cursor>", "Pagination cursor from a previous request")
+    .addHelpText("after", `
+Examples:
+  $ paragraph post feed
+  $ paragraph post feed --limit 5
+  $ paragraph post feed --json | jq '.data[].post.title'`)
     .action(async function (this: Command, opts) {
       try {
         const result = await posts.getFeed({
@@ -281,13 +365,20 @@ export function registerPostCommands(program: Command): void {
 
   // send test email
   post
-    .command("test-email <id>")
+    .command("test-email [id]")
     .description("Send a test newsletter email for a draft post")
-    .action(async function (this: Command, id: string) {
+    .option("--id <id>", "Post ID")
+    .addHelpText("after", `
+Examples:
+  $ paragraph post test-email abc123
+  $ paragraph post test-email --id abc123`)
+    .action(async function (this: Command, positionalId: string | undefined, opts) {
       try {
+        const id = requireArg(positionalId, opts.id, "post ID");
         const apiKey = requireApiKey();
         await posts.sendTestEmail(id, apiKey);
         writeSuccess(`Test email sent for post: ${id}`);
+        outputData(this, { ID: id, Status: "sent" }, { id, testEmailSent: true });
       } catch (err) {
         handleError(err);
       }
@@ -295,14 +386,44 @@ export function registerPostCommands(program: Command): void {
 
   // publish
   post
-    .command("publish <id-or-slug>")
+    .command("publish [id-or-slug]")
     .description("Publish a draft post")
+    .option("--id <id-or-slug>", "Post ID or slug")
     .option("--newsletter", "Also send as newsletter email to subscribers")
-    .action(async function (this: Command, idOrSlug: string, opts) {
+    .option("--dry-run", "Preview what would be published without publishing")
+    .addHelpText("after", `
+Examples:
+  $ paragraph post publish my-post
+  $ paragraph post publish --id my-post
+  $ paragraph post publish my-post --newsletter
+  $ paragraph post publish my-post --dry-run
+  $ paragraph post publish my-post --json`)
+    .action(async function (this: Command, idOrSlug: string | undefined, opts) {
       try {
+        const id = requireArg(idOrSlug, opts.id, "post ID or slug");
+
+        if (opts.dryRun) {
+          const apiKey = requireApiKey();
+          const data = await posts.resolveOwnPost(id, apiKey);
+          writeInfo(`Would publish post: ${data.title || id}`);
+          outputData(
+            this,
+            {
+              ID: (data.id || id) as string,
+              Title: data.title as string,
+              Slug: (data.slug || id) as string,
+              Newsletter: opts.newsletter ? "yes" : "no",
+              Action: "publish (dry-run)",
+            },
+            { ...data, dryRun: true, newsletter: !!opts.newsletter }
+          );
+          return;
+        }
+
         const apiKey = requireApiKey();
-        await posts.updatePostStatus(idOrSlug, "published", apiKey, opts.newsletter);
-        writeSuccess(`Post published: ${idOrSlug}`);
+        await posts.updatePostStatus(id, "published", apiKey, opts.newsletter);
+        writeSuccess(`Post published: ${id}`);
+        outputData(this, { ID: id, Status: "published" }, { id, status: "published" });
       } catch (err) {
         handleError(err);
       }
@@ -310,13 +431,21 @@ export function registerPostCommands(program: Command): void {
 
   // draft
   post
-    .command("draft <id-or-slug>")
+    .command("draft [id-or-slug]")
     .description("Revert a post to draft")
-    .action(async function (this: Command, idOrSlug: string) {
+    .option("--id <id-or-slug>", "Post ID or slug")
+    .addHelpText("after", `
+Examples:
+  $ paragraph post draft my-post
+  $ paragraph post draft --id my-post
+  $ paragraph post draft my-post --json`)
+    .action(async function (this: Command, idOrSlug: string | undefined, opts) {
       try {
+        const id = requireArg(idOrSlug, opts.id, "post ID or slug");
         const apiKey = requireApiKey();
-        await posts.updatePostStatus(idOrSlug, "draft", apiKey);
-        writeSuccess(`Post reverted to draft: ${idOrSlug}`);
+        await posts.updatePostStatus(id, "draft", apiKey);
+        writeSuccess(`Post reverted to draft: ${id}`);
+        outputData(this, { ID: id, Status: "draft" }, { id, status: "draft" });
       } catch (err) {
         handleError(err);
       }
@@ -324,13 +453,41 @@ export function registerPostCommands(program: Command): void {
 
   // archive
   post
-    .command("archive <id-or-slug>")
+    .command("archive [id-or-slug]")
     .description("Archive a post")
-    .action(async function (this: Command, idOrSlug: string) {
+    .option("--id <id-or-slug>", "Post ID or slug")
+    .option("--dry-run", "Preview what would be archived without archiving")
+    .addHelpText("after", `
+Examples:
+  $ paragraph post archive my-post
+  $ paragraph post archive --id my-post
+  $ paragraph post archive my-post --dry-run
+  $ paragraph post archive my-post --json`)
+    .action(async function (this: Command, idOrSlug: string | undefined, opts) {
       try {
+        const id = requireArg(idOrSlug, opts.id, "post ID or slug");
+
+        if (opts.dryRun) {
+          const apiKey = requireApiKey();
+          const data = await posts.resolveOwnPost(id, apiKey);
+          writeInfo(`Would archive post: ${data.title || id}`);
+          outputData(
+            this,
+            {
+              ID: (data.id || id) as string,
+              Title: data.title as string,
+              Slug: (data.slug || id) as string,
+              Action: "archive (dry-run)",
+            },
+            { ...data, dryRun: true }
+          );
+          return;
+        }
+
         const apiKey = requireApiKey();
-        await posts.updatePostStatus(idOrSlug, "archived", apiKey);
-        writeSuccess(`Post archived: ${idOrSlug}`);
+        await posts.updatePostStatus(id, "archived", apiKey);
+        writeSuccess(`Post archived: ${id}`);
+        outputData(this, { ID: id, Status: "archived" }, { id, status: "archived" });
       } catch (err) {
         handleError(err);
       }
