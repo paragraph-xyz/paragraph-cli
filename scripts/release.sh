@@ -4,11 +4,30 @@ set -euo pipefail
 # Usage: npm run release [patch|minor|major]
 # Builds, tests, publishes to npm, creates a GitHub release,
 # and updates the Homebrew tap.
+#
+# Requires an NPM_TOKEN environment variable for publishing.
+# Create a granular access token at https://www.npmjs.com/settings/tokens
+# with read/write permissions for @paragraph-com/cli.
+# The token must NOT require 2FA (use a granular token, not legacy).
+# You can delete the token after the release is complete.
 
 BUMP="${1:-patch}"
 
 if [[ "$BUMP" != "patch" && "$BUMP" != "minor" && "$BUMP" != "major" ]]; then
   echo "Usage: npm run release [patch|minor|major]"
+  exit 1
+fi
+
+if [[ -z "${NPM_TOKEN:-}" ]]; then
+  echo "Error: NPM_TOKEN is not set."
+  echo ""
+  echo "Create a granular access token at https://www.npmjs.com/settings/tokens"
+  echo "  - Type: Granular Access Token"
+  echo "  - Packages: Read and write, scoped to @paragraph-com/cli"
+  echo "  - Do NOT require 2FA on the token"
+  echo "  - You can delete the token after the release"
+  echo ""
+  echo "Then run: NPM_TOKEN=<token> npm run release $BUMP"
   exit 1
 fi
 
@@ -46,6 +65,8 @@ git push && git push --tags
 
 # Publish to npm
 echo "=> Publishing to npm..."
+echo "//registry.npmjs.org/:_authToken=${NPM_TOKEN}" > .npmrc
+trap 'rm -f .npmrc' EXIT
 if ! npm publish; then
   echo ""
   echo "ERROR: npm publish failed. The git tag $NEW_VERSION has been pushed."
