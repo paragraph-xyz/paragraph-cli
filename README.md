@@ -11,7 +11,7 @@ npm install -g @paragraph-com/cli
 Or via Homebrew:
 
 ```bash
-brew tap paragraph-com/tap && brew install paragraph
+brew tap paragraph-xyz/tap && brew install paragraph
 ```
 
 ## Quick start
