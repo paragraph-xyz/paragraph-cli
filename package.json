@@ -1,6 +1,6 @@
 {
   "name": "@paragraph-com/cli",
-  "version": "0.0.1",
+  "version": "0.0.2",
   "type": "module",
   "description": "CLI for Paragraph",
   "repository": {
@@ -13,7 +13,14 @@
   },
   "license": "MIT",
   "author": "Paragraph (https://paragraph.com)",
-  "keywords": ["cli", "paragraph", "newsletter", "web3", "blockchain", "publishing"],
+  "keywords": [
+    "cli",
+    "paragraph",
+    "newsletter",
+    "web3",
+    "blockchain",
+    "publishing"
+  ],
   "bin": {
     "paragraph": "./dist/index.js"
   },
