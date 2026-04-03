@@ -68,18 +68,23 @@ Examples:
 
   subscriber
     .command("add")
-    .description("Add a subscriber")
-    .requiredOption("--email <email>", "Subscriber email address")
+    .description("Add a subscriber by email or wallet address")
+    .option("--email <email>", "Subscriber email address")
+    .option("--wallet <address>", "Subscriber wallet address (0x format)")
     .addHelpText("after", `
 Examples:
   $ paragraph subscriber add --email user@example.com
+  $ paragraph subscriber add --wallet 0x1234...abcd
   $ paragraph subscriber add --email user@example.com --json`)
     .action(async function (this: Command, opts) {
       try {
+        if (!opts.email && !opts.wallet) {
+          throw new Error("Provide --email or --wallet (or both).");
+        }
         const apiKey = requireApiKey();
-        await subscribers.addSubscriber(opts.email, apiKey);
-        writeSuccess(`Subscriber added: ${opts.email}`);
-        outputData(this, { Email: opts.email }, { email: opts.email, added: true });
+        await subscribers.addSubscriber({ email: opts.email, wallet: opts.wallet }, apiKey);
+        writeSuccess(`Subscriber added: ${opts.email || opts.wallet}`);
+        outputData(this, { Email: opts.email, Wallet: opts.wallet }, { email: opts.email, wallet: opts.wallet, added: true });
       } catch (err) {
         handleError(err);
       }

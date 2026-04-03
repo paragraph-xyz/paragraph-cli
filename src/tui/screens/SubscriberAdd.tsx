@@ -21,7 +21,7 @@ export function SubscriberAdd() {
   const submit = async (email: string) => {
     setLoading(true);
     try {
-      await addSubscriber(email, apiKey!);
+      await addSubscriber({ email }, apiKey!);
       setMessage(`Subscriber added: ${email}`);
     } catch (err) {
       setError(err instanceof Error ? err.message : String(err));

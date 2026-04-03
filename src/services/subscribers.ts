@@ -29,12 +29,12 @@ export async function getSubscriberCount(
 }
 
 export async function addSubscriber(
-  email: string,
+  params: { email?: string; wallet?: string },
   apiKey: string
 ): Promise<void> {
-  addSubscriberBody.parse({ email });
+  addSubscriberBody.parse(params);
   const client = createClient(apiKey);
-  await client.subscribers.create({ email });
+  await client.subscribers.create(params);
 }
 
 export async function importSubscribers(
