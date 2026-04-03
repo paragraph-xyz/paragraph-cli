@@ -22,15 +22,11 @@ Examples:
         outputTable(
           this,
           ["Title", "Publication", "Slug"],
-          items.map((r) => {
-            const post = r.post as Record<string, unknown> | undefined;
-            const blog = r.blog as Record<string, unknown> | undefined;
-            return [
-              String(post?.title || ""),
-              String(blog?.name || ""),
-              String(post?.slug || ""),
-            ];
-          }),
+          items.map((r) => [
+            r.post.title || "",
+            r.blog.name || "",
+            r.post.slug || "",
+          ]),
           items
         );
       } catch (err) {
@@ -52,14 +48,11 @@ Examples:
         outputTable(
           this,
           ["Name", "Slug", "Subscribers"],
-          items.map((r) => {
-            const blog = r.blog as Record<string, unknown> | undefined;
-            return [
-              String(blog?.name || ""),
-              String(blog?.slug || ""),
-              String(r.activeSubscriberCount || ""),
-            ];
-          }),
+          items.map((r) => [
+            r.blog.name || "",
+            r.blog.slug || "",
+            String(r.activeSubscriberCount || ""),
+          ]),
           items
         );
       } catch (err) {

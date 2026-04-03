@@ -20,17 +20,13 @@ Examples:
       try {
         const id = requireArg(positionalId, opts.id, "coin ID or address");
         const data = await coins.getCoin(id);
-        const metadata = data.metadata as
-          | Record<string, unknown>
-          | undefined;
         outputData(
           this,
           {
-            ID: data.id as string,
-            Name: (metadata?.name || data.name) as string,
-            Ticker: (metadata?.symbol || data.ticker) as string,
-            Contract: data.contractAddress as string,
-            Publication: data.publicationId as string,
+            ID: data.id,
+            Name: data.metadata.name,
+            Ticker: data.metadata.symbol,
+            Contract: data.contractAddress,
           },
           data
         );
@@ -58,14 +54,11 @@ Examples:
         outputTable(
           this,
           ["Name", "Ticker", "Contract"],
-          result.items.map((c) => {
-            const metadata = c.metadata as Record<string, unknown> | undefined;
-            return [
-              String(metadata?.name || c.name || ""),
-              String(metadata?.symbol || c.ticker || ""),
-              String(c.contractAddress || ""),
-            ];
-          }),
+          result.items.map((c) => [
+            c.metadata.name,
+            c.metadata.symbol,
+            c.contractAddress,
+          ]),
           result.items,
           { cursor: result.cursor }
         );
@@ -91,15 +84,11 @@ Examples:
         outputTable(
           this,
           ["Ticker", "Publication", "Contract"],
-          items.map((r) => {
-            const c = r.coin as Record<string, unknown> | undefined;
-            const blog = r.blog as Record<string, unknown> | undefined;
-            return [
-              String(c?.ticker || ""),
-              String(blog?.name || ""),
-              String(c?.contractAddress || ""),
-            ];
-          }),
+          items.map((r) => [
+            r.coin.ticker || "",
+            r.blog.name || "",
+            r.coin.contractAddress || "",
+          ]),
           items
         );
       } catch (err) {
@@ -129,8 +118,8 @@ Examples:
           this,
           ["Wallet", "Balance"],
           result.items.map((h) => [
-            String(h.walletAddress || ""),
-            String(h.balance || ""),
+            h.walletAddress,
+            h.balance,
           ]),
           result.items,
           { cursor: result.cursor }

@@ -31,10 +31,10 @@ export function SubscriberList() {
         <TableView
           headers={["Email", "Wallet", "Date"]}
           rows={data.items.map((s) => [
-            String(s.email || ""),
-            String(s.walletAddress || ""),
+            s.email || "",
+            s.walletAddress || "",
             s.createdAt
-              ? new Date(s.createdAt as string).toLocaleDateString()
+              ? new Date(s.createdAt).toLocaleDateString()
               : "",
           ])}
         />

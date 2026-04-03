@@ -23,11 +23,11 @@ Examples:
         outputData(
           this,
           {
-            ID: data.id as string,
-            Name: data.name as string,
-            Wallet: data.walletAddress as string,
-            Publication: data.publicationId as string,
-            Bio: data.bio as string,
+            ID: data.id,
+            Name: data.name,
+            Wallet: data.walletAddress,
+            Publication: data.publicationId,
+            Bio: data.bio,
           },
           data
         );

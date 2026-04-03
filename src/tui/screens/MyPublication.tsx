@@ -34,10 +34,10 @@ export function MyPublication() {
       {data && (
         <DataView
           data={{
-            Name: (data.name || data.blogName) as string,
-            Slug: (data.slug || data.url) as string,
-            Domain: (data.customDomain || data.domain) as string,
-            Description: (data.description || data.summary) as string,
+            Name: data.name,
+            Slug: data.slug,
+            Domain: data.customDomain,
+            Description: data.summary,
           }}
         />
       )}

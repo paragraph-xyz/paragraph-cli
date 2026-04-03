@@ -20,8 +20,6 @@ export function PostDetail() {
     if (key.escape) goBack();
   });
 
-  const markdown = data?.markdown as string | undefined;
-
   return (
     <Box flexDirection="column">
       <Header title="Post Detail" />
@@ -35,14 +33,14 @@ export function PostDetail() {
             data={{
               Title: data.title,
               Subtitle: data.subtitle,
-              Status: data.status,
-              Date: data.createdAt,
+              Slug: data.slug,
+              Date: data.publishedAt || data.updatedAt,
             }}
           />
-          {markdown && (
+          {data.markdown && (
             <Box marginTop={1} flexDirection="column">
               <Text dimColor>{"─".repeat(50)}</Text>
-              <Text>{markdown}</Text>
+              <Text>{data.markdown}</Text>
             </Box>
           )}
         </Box>

@@ -70,7 +70,7 @@ npm install -g @paragraph-com/cli@${NEW_VERSION#v}
 \`\`\`
 
 \`\`\`bash
-brew tap paragraph-com/tap
+brew tap paragraph-xyz/tap
 brew install paragraph
 \`\`\`
 
@@ -87,7 +87,7 @@ TARBALL_URL="https://github.com/paragraph-xyz/paragraph-cli/releases/download/${
 # Update Homebrew formula
 echo "=> Updating Homebrew formula..."
 FORMULA_DIR="$(mktemp -d)"
-FORMULA_REPO="paragraph-com/homebrew-tap"
+FORMULA_REPO="paragraph-xyz/homebrew-tap"
 
 gh repo clone "$FORMULA_REPO" "$FORMULA_DIR" 2>/dev/null || {
   echo "   Creating Homebrew tap repo..."
@@ -131,4 +131,4 @@ echo ""
 echo "=> Released $NEW_VERSION"
 echo "   npm: https://www.npmjs.com/package/@paragraph-com/cli"
 echo "   gh:  https://github.com/paragraph-xyz/paragraph-cli/releases/tag/${NEW_VERSION}"
-echo "   brew: brew tap paragraph-com/tap && brew install paragraph"
+echo "   brew: brew tap paragraph-xyz/tap && brew install paragraph"

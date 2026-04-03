@@ -1,29 +1,24 @@
+import type { GetPublicationById200 } from "@paragraph-com/sdk";
 import { createClient } from "./client.js";
 
 export async function getPublication(
   idOrSlug: string,
   apiKey?: string
-): Promise<Record<string, unknown>> {
+): Promise<GetPublicationById200> {
   const client = createClient(apiKey);
 
   try {
-    return (await client.publications
-      .get({ slug: idOrSlug })
-      .single()) as Record<string, unknown>;
+    return await client.publications.get({ slug: idOrSlug }).single();
   } catch {
-    return (await client.publications
-      .get({ id: idOrSlug })
-      .single()) as Record<string, unknown>;
+    return await client.publications.get({ id: idOrSlug }).single();
   }
 }
 
 export async function getPublicationByDomain(
   domain: string
-): Promise<Record<string, unknown>> {
+): Promise<GetPublicationById200> {
   const client = createClient();
-  return (await client.publications
-    .get({ domain })
-    .single()) as Record<string, unknown>;
+  return client.publications.get({ domain }).single();
 }
 
 /**
@@ -32,7 +27,7 @@ export async function getPublicationByDomain(
 export async function resolvePublication(
   identifier: string,
   apiKey?: string
-): Promise<Record<string, unknown>> {
+): Promise<GetPublicationById200> {
   if (identifier.includes(".")) {
     return getPublicationByDomain(identifier);
   }

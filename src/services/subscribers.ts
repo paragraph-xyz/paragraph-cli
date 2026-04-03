@@ -1,23 +1,22 @@
 import * as fs from "fs";
+import { addSubscriberBody } from "@paragraph-com/sdk";
+import type { ListSubscribers200ItemsItem } from "@paragraph-com/sdk";
 import { createClient } from "./client.js";
 
-export interface PaginatedResult {
-  items: Record<string, unknown>[];
+export interface PaginatedResult<T> {
+  items: T[];
   cursor?: string;
 }
 
 export async function listSubscribers(
   apiKey: string,
   pagination?: { limit?: number; cursor?: string }
-): Promise<PaginatedResult> {
+): Promise<PaginatedResult<ListSubscribers200ItemsItem>> {
   const client = createClient(apiKey);
-  const query: Record<string, unknown> = {};
-  if (pagination?.limit) query.limit = pagination.limit;
-  if (pagination?.cursor) query.cursor = pagination.cursor;
   const result = await client.subscribers.get(
-    Object.keys(query).length ? query as Parameters<typeof client.subscribers.get>[0] : undefined
+    pagination?.limit || pagination?.cursor ? pagination : undefined
   );
-  const data = result as { items: Record<string, unknown>[]; pagination?: { cursor?: string; hasMore?: boolean } };
+  const data = result as { items: ListSubscribers200ItemsItem[]; pagination: { cursor?: string } };
   return { items: data.items, cursor: data.pagination?.cursor };
 }
 
@@ -25,16 +24,15 @@ export async function getSubscriberCount(
   publicationId: string
 ): Promise<number> {
   const client = createClient();
-  const result = (await client.subscribers.getCount({
-    id: publicationId,
-  })) as Record<string, unknown>;
-  return (result.count as number) || 0;
+  const result = await client.subscribers.getCount({ id: publicationId });
+  return (result as { count: number }).count || 0;
 }
 
 export async function addSubscriber(
   email: string,
   apiKey: string
 ): Promise<void> {
+  addSubscriberBody.parse({ email });
   const client = createClient(apiKey);
   await client.subscribers.create({ email });
 }

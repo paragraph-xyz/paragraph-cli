@@ -43,7 +43,7 @@ export function PostCreate() {
         subtitle: subtitle || undefined,
         tags: tags ? tags.split(",").map((t) => t.trim()) : undefined,
       });
-      setMessage(`Post created: ${post.title}`);
+      setMessage(`Post created: ${title}`);
       setStep("done");
     } catch (err) {
       setErrorMsg(err instanceof Error ? err.message : String(err));

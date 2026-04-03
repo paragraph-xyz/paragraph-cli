@@ -32,9 +32,9 @@ Examples:
           this,
           ["Email", "Wallet", "Date"],
           result.items.map((s) => [
-            String(s.email || ""),
-            String(s.walletAddress || ""),
-            formatDate(s),
+            s.email || "",
+            s.walletAddress || "",
+            formatDate({ createdAt: s.createdAt }),
           ]),
           result.items,
           { cursor: result.cursor }

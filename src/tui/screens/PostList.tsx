@@ -38,8 +38,8 @@ export function PostList() {
         <Select
           options={data.items.map((p) => ({
             label: `${p.title || "Untitled"}`,
-            value: String(p.id),
-            description: `${p.status || ""} · ${formatDate(p.publishedAt || p.createdAt)}`,
+            value: p.id,
+            description: formatDate(p.publishedAt || p.updatedAt),
           }))}
           onChange={(id) => navigate({ name: "post-detail", params: { id } })}
         />

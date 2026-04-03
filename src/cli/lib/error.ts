@@ -1,3 +1,4 @@
+import { ZodError } from "zod";
 import { writeError } from "./output.js";
 import { deleteConfig } from "../../services/config.js";
 
@@ -34,6 +35,10 @@ function errorCode(status?: number): string {
 }
 
 function extractError(err: unknown): { message: string; status?: number; code: string } {
+  if (err instanceof ZodError) {
+    const messages = err.issues.map((i) => `${i.path.join(".")}: ${i.message}`);
+    return { message: "Validation failed: " + messages.join("; "), code: "VALIDATION_ERROR" };
+  }
   if (isAxiosError(err)) {
     const status = err.response?.status;
     const message = err.response?.data?.message || err.message;

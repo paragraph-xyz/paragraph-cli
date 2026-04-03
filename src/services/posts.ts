@@ -1,8 +1,13 @@
+import {
+  createPostBody,
+  updatePostBody,
+} from "@paragraph-com/sdk";
+import type { GetPostById200, GetPostsFeed200ItemsItem } from "@paragraph-com/sdk";
 import { createClient } from "./client.js";
 import { getPublication } from "./publications.js";
 
-export interface PaginatedResult {
-  items: Record<string, unknown>[];
+export interface PaginatedResult<T> {
+  items: T[];
   cursor?: string;
 }
 
@@ -16,7 +21,7 @@ export async function listPosts(params: {
   status?: string;
   limit?: number;
   cursor?: string;
-}): Promise<PaginatedResult> {
+}): Promise<PaginatedResult<GetPostById200>> {
   const client = createClient(params.apiKey);
 
   if (params.publicationId) {
@@ -24,38 +29,29 @@ export async function listPosts(params: {
     let pubId = params.publicationId;
     if (isSlug(pubId)) {
       const pub = await getPublication(pubId);
-      pubId = String(pub.id || pub._id || pubId);
+      pubId = pub.id;
     }
-    const query: Record<string, unknown> = { publicationId: pubId };
-    if (params.limit) query.limit = params.limit;
-    if (params.cursor) query.cursor = params.cursor;
-    const result = await client.posts.get(
-      query as Parameters<typeof client.posts.get>[0]
+    const { items, pagination } = await client.posts.get(
+      { publicationId: pubId },
+      { limit: params.limit, cursor: params.cursor }
     );
-    const data = result as { items: Record<string, unknown>[]; pagination?: { cursor?: string } };
-    return { items: data.items, cursor: data.pagination?.cursor };
+    return { items, cursor: pagination.cursor };
   }
 
-  const queryParams: Record<string, unknown> = {};
-  if (params.status) queryParams.status = params.status;
-  if (params.limit) queryParams.limit = params.limit;
-  if (params.cursor) queryParams.cursor = params.cursor;
-  const result = await client.posts.list(
-    queryParams as Parameters<typeof client.posts.list>[0]
-  );
-  const data = result as { items: Record<string, unknown>[]; pagination?: { cursor?: string } };
-  return { items: data.items, cursor: data.pagination?.cursor };
+  const { items, pagination } = await client.posts.list({
+    status: params.status as "published" | "draft" | undefined,
+    limit: params.limit,
+    cursor: params.cursor,
+  });
+  return { items, cursor: pagination.cursor };
 }
 
 export async function getPost(
   id: string,
   apiKey?: string
-): Promise<Record<string, unknown>> {
+): Promise<GetPostById200> {
   const client = createClient(apiKey);
-  const post = await client.posts
-    .get({ id }, { includeContent: true })
-    .single();
-  return post as Record<string, unknown>;
+  return client.posts.get({ id }, { includeContent: true }).single();
 }
 
 /**
@@ -67,7 +63,7 @@ export async function getPost(
 export async function resolvePost(
   identifier: string,
   apiKey?: string
-): Promise<Record<string, unknown>> {
+): Promise<GetPostById200> {
   // URL
   const urlMatch = identifier.match(/^https?:\/\/[^/]+\/@([^/]+)\/([^/?#]+)/);
   if (urlMatch) {
@@ -91,7 +87,7 @@ export async function resolvePost(
 export async function resolveOwnPost(
   idOrSlug: string,
   apiKey: string
-): Promise<Record<string, unknown>> {
+): Promise<GetPostById200> {
   // If it doesn't look like a bare slug, use the standard resolver
   if (!isSlug(idOrSlug) || idOrSlug.includes("/") || idOrSlug.startsWith("http")) {
     return resolvePost(idOrSlug, apiKey);
@@ -118,53 +114,46 @@ export async function getPostBySlugs(
   publicationSlug: string,
   postSlug: string,
   apiKey?: string
-): Promise<Record<string, unknown>> {
+): Promise<GetPostById200> {
   const client = createClient(apiKey);
-  const post = await client.posts
+  return client.posts
     .get({ publicationSlug, postSlug }, { includeContent: true })
     .single();
-  return post as Record<string, unknown>;
 }
 
 export async function getPostByPubIdAndSlug(
   publicationId: string,
   postSlug: string,
   apiKey?: string
-): Promise<Record<string, unknown>> {
+): Promise<GetPostById200> {
   const client = createClient(apiKey);
-  const post = await client.posts
+  return client.posts
     .get({ publicationId, postSlug }, { includeContent: true })
     .single();
-  return post as Record<string, unknown>;
 }
 
 export async function getPostsByTag(
   tag: string,
   pagination?: { limit?: number; cursor?: string }
-): Promise<PaginatedResult> {
+): Promise<PaginatedResult<GetPostById200>> {
   const client = createClient();
-  const query: Record<string, unknown> = { tag };
-  if (pagination?.limit) query.limit = pagination.limit;
-  if (pagination?.cursor) query.cursor = pagination.cursor;
-  const result = await client.posts.get(
-    query as Parameters<typeof client.posts.get>[0]
+  const { items, pagination: pag } = await client.posts.get(
+    { tag },
+    { limit: pagination?.limit, cursor: pagination?.cursor }
   );
-  const data = result as { items: Record<string, unknown>[]; pagination?: { cursor?: string } };
-  return { items: data.items, cursor: data.pagination?.cursor };
+  return { items, cursor: pag.cursor };
 }
 
 export async function getFeed(pagination?: {
   limit?: number;
   cursor?: string;
-}): Promise<PaginatedResult> {
+}): Promise<PaginatedResult<GetPostsFeed200ItemsItem>> {
   const client = createClient();
-  const query: Record<string, unknown> = { limit: pagination?.limit || 20 };
-  if (pagination?.cursor) query.cursor = pagination.cursor;
-  const result = await client.feed.get(
-    query as Parameters<typeof client.feed.get>[0]
-  );
-  const data = result as { items: Record<string, unknown>[]; pagination?: { cursor?: string } };
-  return { items: data.items, cursor: data.pagination?.cursor };
+  const { items, pagination: pag } = await client.feed.get({
+    limit: pagination?.limit || 20,
+    cursor: pagination?.cursor,
+  });
+  return { items, cursor: pag.cursor };
 }
 
 export async function createPost(params: {
@@ -173,20 +162,17 @@ export async function createPost(params: {
   markdown: string;
   subtitle?: string;
   tags?: string[];
-}): Promise<Record<string, unknown>> {
-  const client = createClient(params.apiKey);
-  const body: Record<string, unknown> = {
+}) {
+  const body = {
     title: params.title,
     markdown: params.markdown,
-    status: "draft",
+    status: "draft" as const,
+    subtitle: params.subtitle,
+    categories: params.tags,
   };
-  if (params.subtitle) body.subtitle = params.subtitle;
-  if (params.tags) body.categories = params.tags;
-
-  const post = await client.posts.create(
-    body as Parameters<typeof client.posts.create>[0]
-  );
-  return post as Record<string, unknown>;
+  createPostBody.parse(body);
+  const client = createClient(params.apiKey);
+  return client.posts.create(body);
 }
 
 export async function updatePost(
@@ -199,27 +185,23 @@ export async function updatePost(
     tags?: string[];
   }
 ): Promise<void> {
+  const body = {
+    title: params.title,
+    subtitle: params.subtitle,
+    markdown: params.markdown,
+    categories: params.tags,
+  };
+  updatePostBody.parse(body);
   const client = createClient(params.apiKey);
-  const body: Record<string, unknown> = {};
-  if (params.title) body.title = params.title;
-  if (params.subtitle) body.subtitle = params.subtitle;
-  if (params.markdown) body.markdown = params.markdown;
-  if (params.tags) body.categories = params.tags;
 
   // Try ID-first to avoid slug/ID ambiguity (short IDs like "abc123" match isSlug)
   try {
-    await client.posts.update({
-      id: idOrSlug,
-      ...body,
-    } as Parameters<typeof client.posts.update>[0]);
+    await client.posts.update({ id: idOrSlug, ...body });
     return;
   } catch {
     if (!isSlug(idOrSlug)) throw new Error(`Post not found: ${idOrSlug}`);
   }
-  await client.posts.update({
-    slug: idOrSlug,
-    ...body,
-  } as Parameters<typeof client.posts.update>[0]);
+  await client.posts.update({ slug: idOrSlug, ...body });
 }
 
 export async function sendTestEmail(
@@ -252,21 +234,14 @@ export async function updatePostStatus(
   sendNewsletter?: boolean
 ): Promise<void> {
   const client = createClient(apiKey);
-  const body: Record<string, unknown> = { status };
-  if (sendNewsletter) body.sendNewsletter = true;
+  const body = { status, sendNewsletter: sendNewsletter || undefined };
 
   // Try ID-first to avoid slug/ID ambiguity
   try {
-    await client.posts.update({
-      id: idOrSlug,
-      ...body,
-    } as Parameters<typeof client.posts.update>[0]);
+    await client.posts.update({ id: idOrSlug, ...body });
     return;
   } catch {
     if (!isSlug(idOrSlug)) throw new Error(`Post not found: ${idOrSlug}`);
   }
-  await client.posts.update({
-    slug: idOrSlug,
-    ...body,
-  } as Parameters<typeof client.posts.update>[0]);
+  await client.posts.update({ slug: idOrSlug, ...body });
 }

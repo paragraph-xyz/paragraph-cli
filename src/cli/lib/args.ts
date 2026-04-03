@@ -12,8 +12,8 @@ export function requireArg(
   return value;
 }
 
-export function formatDate(p: Record<string, unknown>): string {
-  const raw = (p.publishedAt || p.createdAt || p.updatedAt) as string | undefined;
+export function formatDate(p: { publishedAt?: string; createdAt?: string | number; updatedAt?: string }): string {
+  const raw = p.publishedAt || p.createdAt || p.updatedAt;
   if (!raw) return "";
   const n = Number(raw);
   const date = isNaN(n) ? new Date(raw) : new Date(n);

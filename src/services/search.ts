@@ -1,15 +1,16 @@
+import type { SearchPosts200Item, SearchBlogs200Item } from "@paragraph-com/sdk";
 import { createClient } from "./client.js";
 
 export async function searchPosts(
   query: string
-): Promise<Record<string, unknown>[]> {
+): Promise<SearchPosts200Item[]> {
   const client = createClient();
-  return (await client.search.posts(query)) as Record<string, unknown>[];
+  return client.search.posts(query);
 }
 
 export async function searchBlogs(
   query: string
-): Promise<Record<string, unknown>[]> {
+): Promise<SearchBlogs200Item[]> {
   const client = createClient();
-  return (await client.search.blogs(query)) as Record<string, unknown>[];
+  return client.search.blogs(query);
 }

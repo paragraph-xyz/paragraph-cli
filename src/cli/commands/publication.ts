@@ -26,10 +26,10 @@ Examples:
         outputData(
           this,
           {
-            Name: (pub.name || pub.blogName) as string,
-            Slug: (pub.slug || pub.url) as string,
-            Domain: (pub.customDomain || pub.domain) as string,
-            Description: (pub.description || pub.summary) as string,
+            Name: pub.name,
+            Slug: pub.slug,
+            Domain: pub.customDomain,
+            Description: pub.summary,
           },
           pub
         );

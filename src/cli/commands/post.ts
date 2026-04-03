@@ -61,13 +61,12 @@ Examples:
               .map((t: string) => t.trim()),
           });
 
-          writeSuccess(`Post created: ${data.title || opts.title}`);
+          writeSuccess(`Post created: ${opts.title}`);
           outputData(
             this,
             {
-              ID: data.id as string,
-              Title: (data.title || opts.title) as string,
-              Slug: data.slug as string,
+              ID: data.id,
+              Title: opts.title,
             },
             data
           );
@@ -110,8 +109,8 @@ Examples:
 
         const headers = ["ID", "Title", "Date"];
         const rows = result.items.map((p) => [
-          String(p.id || ""),
-          String(p.title || ""),
+          p.id,
+          p.title,
           formatDate(p),
         ]);
 
@@ -144,7 +143,7 @@ Examples:
         const data = await posts.resolvePost(id, getApiKey());
 
         if (opts.field) {
-          const value = data[opts.field];
+          const value = (data as Record<string, unknown>)[opts.field];
           if (value === undefined) {
             throw new Error(`Field "${opts.field}" not found. Available: ${Object.keys(data).join(", ")}`);
           }
@@ -153,20 +152,19 @@ Examples:
           return;
         }
 
-        const markdown = data.markdown as string | undefined;
-        const preview = markdown
-          ? markdown.length > 200
-            ? markdown.slice(0, 200) + "..."
-            : markdown
+        const preview = data.markdown
+          ? data.markdown.length > 200
+            ? data.markdown.slice(0, 200) + "..."
+            : data.markdown
           : "";
 
         outputData(
           this,
           {
-            ID: data.id as string,
-            Title: data.title as string,
-            Subtitle: data.subtitle as string,
-            Slug: data.slug as string,
+            ID: data.id,
+            Title: data.title,
+            Subtitle: data.subtitle,
+            Slug: data.slug,
             Date: formatDate(data),
             Content: preview,
           },
@@ -213,10 +211,7 @@ Examples:
               .map((t: string) => t.trim()),
           });
           writeSuccess(`Post updated: ${id}`);
-          const result: Record<string, unknown> = { id, updated: true };
-          if (opts.title) result.title = opts.title;
-          if (opts.subtitle) result.subtitle = opts.subtitle;
-          outputData(this, { ID: id }, result);
+          outputData(this, { ID: id }, { id, updated: true, title: opts.title, subtitle: opts.subtitle });
         } catch (err) {
           handleError(err);
         }
@@ -248,9 +243,9 @@ Examples:
             outputData(
               this,
               {
-                ID: (data.id || id) as string,
-                Title: data.title as string,
-                Slug: (data.slug || id) as string,
+                ID: data.id || id,
+                Title: data.title,
+                Slug: data.slug || id,
                 Action: "delete (dry-run)",
               },
               { ...data, dryRun: true }
@@ -302,8 +297,8 @@ Examples:
           this,
           ["ID", "Title", "Date"],
           result.items.map((p) => [
-            String(p.id || ""),
-            String(p.title || ""),
+            p.id,
+            p.title,
             formatDate(p),
           ]),
           result.items,
@@ -337,15 +332,11 @@ Examples:
         outputTable(
           this,
           ["Title", "Publication", "Date"],
-          result.items.map((item) => {
-            const p = item.post as Record<string, unknown> | undefined;
-            const pub = item.publication as Record<string, unknown> | undefined;
-            return [
-              String(p?.title || ""),
-              String(pub?.name || ""),
-              formatDate(p || {}),
-            ];
-          }),
+          result.items.map((item) => [
+            item.post.title,
+            item.publication.name,
+            formatDate(item.post),
+          ]),
           result.items,
           { cursor: result.cursor }
         );
@@ -403,9 +394,9 @@ Examples:
           outputData(
             this,
             {
-              ID: (data.id || id) as string,
-              Title: data.title as string,
-              Slug: (data.slug || id) as string,
+              ID: data.id || id,
+              Title: data.title,
+              Slug: data.slug || id,
               Newsletter: opts.newsletter ? "yes" : "no",
               Action: "publish (dry-run)",
             },
@@ -468,9 +459,9 @@ Examples:
           outputData(
             this,
             {
-              ID: (data.id || id) as string,
-              Title: data.title as string,
-              Slug: (data.slug || id) as string,
+              ID: data.id || id,
+              Title: data.title,
+              Slug: data.slug || id,
               Action: "archive (dry-run)",
             },
             { ...data, dryRun: true }
