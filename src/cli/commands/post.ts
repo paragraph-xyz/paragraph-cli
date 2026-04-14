@@ -8,6 +8,18 @@ import { readStdin } from "../lib/stdin.js";
 import { confirm } from "../lib/prompt.js";
 import { requireArg, formatDate } from "../lib/args.js";
 
+function parseScheduleTime(value: string): number {
+  const asNum = Number(value);
+  if (Number.isFinite(asNum) && asNum > 1_000_000_000_000) return asNum;
+  const date = new Date(value);
+  if (isNaN(date.getTime())) {
+    throw new Error(
+      `Invalid schedule time: "${value}". Use ISO 8601 (e.g. "2026-05-01T09:00:00Z") or Unix ms.`
+    );
+  }
+  return date.getTime();
+}
+
 async function resolveMarkdown(opts: {
   text?: string;
   file?: string;
@@ -36,11 +48,14 @@ export function registerPostCommands(program: Command): void {
       .option("--file <path>", "Read post content from a file")
       .option("--subtitle <subtitle>", "Post subtitle")
       .option("--tags <tags>", "Comma-separated tags")
+      .option("--schedule-at <time>", "Schedule publish at a future time (ISO 8601 or Unix ms)")
+      .option("--newsletter", "Also send as newsletter email to subscribers")
       .addHelpText("after", `
 Examples:
   $ paragraph post create --title "My Post" --file ./post.md
   $ paragraph post create --title "My Post" --text "# Hello World"
   $ paragraph post create --title "My Post" --tags "web3,defi" --file ./post.md
+  $ paragraph post create --title "My Post" --schedule-at "2026-05-01T09:00:00Z"
   $ cat draft.md | paragraph post create --title "My Post"`)
       .action(async function (this: Command, opts) {
         try {
@@ -51,6 +66,10 @@ Examples:
               "Provide content via --text, --file, or pipe to stdin."
             );
 
+          const scheduledAt = opts.scheduleAt
+            ? parseScheduleTime(opts.scheduleAt)
+            : undefined;
+
           const data = await posts.createPost({
             apiKey,
             title: opts.title,
@@ -59,14 +78,18 @@ Examples:
             tags: opts.tags
               ?.split(",")
               .map((t: string) => t.trim()),
+            scheduledAt,
+            sendNewsletter: opts.newsletter,
           });
 
-          writeSuccess(`Post created: ${opts.title}`);
+          const label = scheduledAt ? "Post scheduled" : "Post created";
+          writeSuccess(`${label}: ${opts.title}`);
           outputData(
             this,
             {
               ID: data.id,
               Title: opts.title,
+              Status: data.status,
             },
             data
           );
@@ -473,6 +496,52 @@ Examples:
         await posts.updatePostStatus(id, "archived", apiKey);
         writeSuccess(`Post archived: ${id}`);
         outputData(this, { ID: id, Status: "archived" }, { id, status: "archived" });
+      } catch (err) {
+        handleError(err);
+      }
+    });
+
+  // schedule
+  post
+    .command("schedule [id-or-slug]")
+    .description("Schedule a draft post for future publication")
+    .option("--id <id-or-slug>", "Post ID or slug")
+    .requiredOption("--at <time>", "Publish time (ISO 8601 or Unix ms)")
+    .option("--newsletter", "Also send as newsletter email to subscribers")
+    .addHelpText("after", `
+Examples:
+  $ paragraph post schedule my-post --at "2026-05-01T09:00:00Z"
+  $ paragraph post schedule my-post --at 1746090000000
+  $ paragraph post schedule my-post --at "2026-05-01T09:00:00Z" --newsletter`)
+    .action(async function (this: Command, idOrSlug: string | undefined, opts) {
+      try {
+        const id = requireArg(idOrSlug, opts.id, "post ID or slug");
+        const apiKey = requireApiKey();
+        const scheduledAt = parseScheduleTime(opts.at);
+        await posts.schedulePost(id, scheduledAt, apiKey, opts.newsletter);
+        writeSuccess(`Post scheduled: ${id} at ${new Date(scheduledAt).toISOString()}`);
+        outputData(this, { ID: id, Status: "scheduled", ScheduledAt: new Date(scheduledAt).toISOString() }, { id, status: "scheduled", scheduledAt });
+      } catch (err) {
+        handleError(err);
+      }
+    });
+
+  // unschedule
+  post
+    .command("unschedule [id-or-slug]")
+    .description("Cancel a scheduled post publication")
+    .option("--id <id-or-slug>", "Post ID or slug")
+    .addHelpText("after", `
+Examples:
+  $ paragraph post unschedule my-post
+  $ paragraph post unschedule --id my-post`)
+    .action(async function (this: Command, idOrSlug: string | undefined, opts) {
+      try {
+        const id = requireArg(idOrSlug, opts.id, "post ID or slug");
+        const apiKey = requireApiKey();
+        await posts.cancelSchedule(id, apiKey);
+        writeSuccess(`Schedule cancelled: ${id}`);
+        outputData(this, { ID: id, Status: "draft" }, { id, status: "draft" });
       } catch (err) {
         handleError(err);
       }

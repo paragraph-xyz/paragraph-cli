@@ -162,13 +162,17 @@ export async function createPost(params: {
   markdown: string;
   subtitle?: string;
   tags?: string[];
+  scheduledAt?: number;
+  sendNewsletter?: boolean;
 }) {
   const body = {
     title: params.title,
     markdown: params.markdown,
-    status: "draft" as const,
+    status: (params.scheduledAt ? undefined : "draft") as "draft" | undefined,
     subtitle: params.subtitle,
     categories: params.tags,
+    scheduledAt: params.scheduledAt,
+    sendNewsletter: params.sendNewsletter,
   };
   createPostBody.parse(body);
   const client = createClient(params.apiKey);
@@ -237,6 +241,43 @@ export async function updatePostStatus(
   const body = { status, sendNewsletter: sendNewsletter || undefined };
 
   // Try ID-first to avoid slug/ID ambiguity
+  try {
+    await client.posts.update({ id: idOrSlug, ...body });
+    return;
+  } catch {
+    if (!isSlug(idOrSlug)) throw new Error(`Post not found: ${idOrSlug}`);
+  }
+  await client.posts.update({ slug: idOrSlug, ...body });
+}
+
+export async function schedulePost(
+  idOrSlug: string,
+  scheduledAt: number,
+  apiKey: string,
+  sendNewsletter?: boolean
+): Promise<void> {
+  const client = createClient(apiKey);
+  const body = {
+    scheduledAt,
+    sendNewsletter: sendNewsletter || undefined,
+  };
+
+  try {
+    await client.posts.update({ id: idOrSlug, ...body });
+    return;
+  } catch {
+    if (!isSlug(idOrSlug)) throw new Error(`Post not found: ${idOrSlug}`);
+  }
+  await client.posts.update({ slug: idOrSlug, ...body });
+}
+
+export async function cancelSchedule(
+  idOrSlug: string,
+  apiKey: string
+): Promise<void> {
+  const client = createClient(apiKey);
+  const body = { scheduledAt: null };
+
   try {
     await client.posts.update({ id: idOrSlug, ...body });
     return;
