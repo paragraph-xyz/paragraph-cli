@@ -1,20 +1,7 @@
 import { ZodError } from "zod";
+import { ParagraphApiError } from "@paragraph-com/sdk";
 import { writeError } from "./output.js";
 import { deleteConfig } from "../../services/config.js";
-
-function isAxiosError(
-  err: unknown
-): err is {
-  response?: { status?: number; data?: { message?: string } };
-  message?: string;
-} {
-  return (
-    typeof err === "object" &&
-    err !== null &&
-    "isAxiosError" in err &&
-    (err as Record<string, unknown>).isAxiosError === true
-  );
-}
 
 function isJsonMode(): boolean {
   return process.argv.includes("--json");
@@ -39,9 +26,10 @@ function extractError(err: unknown): { message: string; status?: number; code: s
     const messages = err.issues.map((i) => `${i.path.join(".")}: ${i.message}`);
     return { message: "Validation failed: " + messages.join("; "), code: "VALIDATION_ERROR" };
   }
-  if (isAxiosError(err)) {
-    const status = err.response?.status;
-    const message = err.response?.data?.message || err.message;
+  if (err instanceof ParagraphApiError) {
+    const status = err.status;
+    const data = err.data as { message?: string } | undefined;
+    const message = data?.message || err.message;
     if (status === 401) {
       return { message: "Unauthorized. Check your API key or run `paragraph login`.", status, code: errorCode(status) };
     } else if (status === 404) {

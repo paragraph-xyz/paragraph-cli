@@ -1,4 +1,5 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
+import { ParagraphApiError } from "@paragraph-com/sdk";
 import { handleError } from "../src/cli/lib/error.js";
 
 // Mock process.exit to prevent test runner from dying
@@ -33,23 +34,15 @@ describe("handleError", () => {
     expect(stderrOutput).toContain("something broke");
   });
 
-  it("handles axios errors with status codes", () => {
-    const axiosErr = {
-      isAxiosError: true,
-      response: { status: 404, data: { message: "Post not found" } },
-      message: "Request failed",
-    };
-    expect(() => handleError(axiosErr)).toThrow();
+  it("handles API errors with status codes", () => {
+    const err = new ParagraphApiError(404, "Not Found", { message: "Post not found" });
+    expect(() => handleError(err)).toThrow();
     expect(stderrOutput).toContain("Not found");
   });
 
   it("handles 401 errors", () => {
-    const axiosErr = {
-      isAxiosError: true,
-      response: { status: 401, data: {} },
-      message: "Unauthorized",
-    };
-    expect(() => handleError(axiosErr)).toThrow();
+    const err = new ParagraphApiError(401, "Unauthorized", {});
+    expect(() => handleError(err)).toThrow();
     expect(stderrOutput).toContain("paragraph login");
   });
 

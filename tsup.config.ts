@@ -30,23 +30,20 @@ export default defineConfig({
     "yoga-layout",
     "yoga-wasm-web",
     "yoga-wasm-web2",
+    // SDK's optional blockchain peers — CLI never calls buy/sell, so these
+    // stay as dynamic imports and only resolve if the user installs them.
+    "viem",
+    "viem/chains",
+    "@whetstone-research/doppler-sdk",
+    "doppler-router",
+    "doppler-router/dist/Permit2",
     ...nodeExternals,
   ],
   noExternal: [
     "@paragraph-com/sdk",
-    "axios",
-    "doppler-router",
     "picocolors",
     "cli-table3",
     "commander",
-    "follow-redirects",
-    "form-data",
-    "combined-stream",
-    "delayed-stream",
-    "asynckit",
-    "mime-types",
-    "mime-db",
-    "proxy-from-env",
   ],
   esbuildOptions(options) {
     options.jsx = "automatic";

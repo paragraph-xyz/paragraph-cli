@@ -1,5 +1,5 @@
 import * as fs from "fs";
-import { addSubscriberBody } from "@paragraph-com/sdk";
+import { addSubscriberBody } from "@paragraph-com/sdk/zod";
 import type { ListSubscribers200ItemsItem } from "@paragraph-com/sdk";
 import { createClient } from "./client.js";
 

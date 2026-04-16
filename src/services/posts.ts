@@ -1,7 +1,7 @@
 import {
   createPostBody,
   updatePostBody,
-} from "@paragraph-com/sdk";
+} from "@paragraph-com/sdk/zod";
 import type { GetPostById200, GetPostsFeed200ItemsItem } from "@paragraph-com/sdk";
 import { createClient } from "./client.js";
 import { getPublication } from "./publications.js";
