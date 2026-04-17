@@ -67,7 +67,7 @@ Examples:
             chunks.push(chunk);
           }
           token = Buffer.concat(chunks).toString("utf-8").trim();
-          if (!token) throw new Error("No API key received on stdin.");
+          if (!token) throw new Error("No API key received on stdin. Pipe the key (e.g. `echo $PARAGRAPH_API_KEY | paragraph login --with-token`) or use --token <key>.");
         } else if (!process.stdin.isTTY) {
           throw new Error(
             "No --token provided and stdin is not a TTY. Use --token <key> or --with-token."
@@ -139,6 +139,7 @@ Examples:
         const apiKey = requireApiKey();
         const me = await validateApiKey(apiKey);
         outputData(this, {
+          ID: me.id as string,
           Name: me.name as string,
           Slug: me.slug as string,
           Domain: me.customDomain as string,

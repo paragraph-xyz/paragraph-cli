@@ -30,7 +30,7 @@ export async function waitForLogin(sessionId: string, signal?: AbortSignal): Pro
       const msg = err instanceof Error ? err.message : String(err);
       // 404 means session was denied/deleted; other errors are transient
       if (msg.includes("404") || msg.includes("Not found")) {
-        throw new Error("Login was denied or expired. Please try again.");
+        throw new Error("Login was denied or expired. For non-interactive use, pass the key directly: `paragraph login --token <key>` (get one at paragraph.com/settings → Publication → Developer).");
       }
       // Transient network error — keep polling
       continue;
@@ -40,11 +40,11 @@ export async function waitForLogin(sessionId: string, signal?: AbortSignal): Pro
       return status.apiKey;
     }
     if (status.status !== "pending") {
-      throw new Error("Login was denied or expired. Please try again.");
+      throw new Error("Login was denied or expired. For non-interactive use, pass the key directly: `paragraph login --token <key>` (get one at paragraph.com/settings → Publication → Developer).");
     }
   }
 
-  throw new Error("Login timed out after 5 minutes. Please try again.");
+  throw new Error("Login timed out after 5 minutes. For non-interactive use, pass the key directly: `paragraph login --token <key>` (get one at paragraph.com/settings → Publication → Developer).");
 }
 
 export function openBrowser(url: string): Promise<void> {

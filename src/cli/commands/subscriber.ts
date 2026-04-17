@@ -3,7 +3,7 @@ import { requireApiKey } from "../../services/auth.js";
 import * as subscribers from "../../services/subscribers.js";
 import { outputData, outputTable, writeSuccess, writeInfo, parseLimit } from "../lib/output.js";
 import { handleError } from "../lib/error.js";
-import { requireArg, formatDate } from "../lib/args.js";
+import { formatDate } from "../lib/args.js";
 
 export function registerSubscriberCommands(program: Command): void {
   const subscriber = program
@@ -58,7 +58,17 @@ Examples:
   $ paragraph subscriber count abc123 --json`)
     .action(async function (this: Command, positionalId: string | undefined, opts) {
       try {
-        const id = requireArg(positionalId, opts.publication, "publication ID", "--publication");
+        const id = positionalId || opts.publication;
+        if (!id) {
+          throw new Error(
+            "Missing publication ID. Run `paragraph whoami --json` to get the publication ID, then pass it as an argument or with --publication."
+          );
+        }
+        if (positionalId && opts.publication && positionalId !== opts.publication) {
+          throw new Error(
+            `Conflicting values for publication ID: "${positionalId}" (argument) vs "${opts.publication}" (--publication).`
+          );
+        }
         const count = await subscribers.getSubscriberCount(id);
         outputData(this, { Count: count }, { count });
       } catch (err) {

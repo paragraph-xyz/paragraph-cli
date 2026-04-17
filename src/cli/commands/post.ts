@@ -27,7 +27,7 @@ async function resolveMarkdown(opts: {
   if (opts.text) return opts.text;
   if (opts.file) {
     if (!fs.existsSync(opts.file)) {
-      throw new Error(`File not found: ${opts.file}`);
+      throw new Error(`File not found: "${opts.file}". Check the path, or use --text <markdown> to pass content inline.`);
     }
     return fs.readFileSync(opts.file, "utf-8");
   }
@@ -130,10 +130,11 @@ Examples:
           cursor: opts.cursor,
         });
 
-        const headers = ["ID", "Title", "Date"];
+        const headers = ["ID", "Title", "Status", "Date"];
         const rows = result.items.map((p) => [
           p.id,
           p.title,
+          p.status ?? "—",
           formatDate(p),
         ]);
 
@@ -188,6 +189,7 @@ Examples:
             Title: data.title,
             Subtitle: data.subtitle,
             Slug: data.slug,
+            Status: data.status ?? "—",
             Date: formatDate(data),
             Content: preview,
           },

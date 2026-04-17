@@ -105,7 +105,7 @@ export async function resolveOwnPost(
   const pub = await validateApiKey(apiKey);
   const pubSlug = pub.slug;
   if (!pubSlug) {
-    throw new Error(`Post not found: ${idOrSlug}`);
+    throw new Error(`Post not found: "${idOrSlug}". Run \`paragraph post list --json\` to see your posts, or use the full \`@publication/slug\` form for posts outside your publication.`);
   }
   return getPostBySlugs(pubSlug, idOrSlug, apiKey);
 }
@@ -203,7 +203,7 @@ export async function updatePost(
     await client.posts.update({ id: idOrSlug, ...body });
     return;
   } catch {
-    if (!isSlug(idOrSlug)) throw new Error(`Post not found: ${idOrSlug}`);
+    if (!isSlug(idOrSlug)) throw new Error(`Post not found: "${idOrSlug}". Run \`paragraph post list --json\` to see your posts, or use the full \`@publication/slug\` form for posts outside your publication.`);
   }
   await client.posts.update({ slug: idOrSlug, ...body });
 }
@@ -226,7 +226,7 @@ export async function deletePost(
     await client.posts.delete({ id: idOrSlug });
     return;
   } catch {
-    if (!isSlug(idOrSlug)) throw new Error(`Post not found: ${idOrSlug}`);
+    if (!isSlug(idOrSlug)) throw new Error(`Post not found: "${idOrSlug}". Run \`paragraph post list --json\` to see your posts, or use the full \`@publication/slug\` form for posts outside your publication.`);
   }
   await client.posts.delete({ slug: idOrSlug });
 }
@@ -245,7 +245,7 @@ export async function updatePostStatus(
     await client.posts.update({ id: idOrSlug, ...body });
     return;
   } catch {
-    if (!isSlug(idOrSlug)) throw new Error(`Post not found: ${idOrSlug}`);
+    if (!isSlug(idOrSlug)) throw new Error(`Post not found: "${idOrSlug}". Run \`paragraph post list --json\` to see your posts, or use the full \`@publication/slug\` form for posts outside your publication.`);
   }
   await client.posts.update({ slug: idOrSlug, ...body });
 }
@@ -266,7 +266,7 @@ export async function schedulePost(
     await client.posts.update({ id: idOrSlug, ...body });
     return;
   } catch {
-    if (!isSlug(idOrSlug)) throw new Error(`Post not found: ${idOrSlug}`);
+    if (!isSlug(idOrSlug)) throw new Error(`Post not found: "${idOrSlug}". Run \`paragraph post list --json\` to see your posts, or use the full \`@publication/slug\` form for posts outside your publication.`);
   }
   await client.posts.update({ slug: idOrSlug, ...body });
 }
@@ -282,7 +282,7 @@ export async function cancelSchedule(
     await client.posts.update({ id: idOrSlug, ...body });
     return;
   } catch {
-    if (!isSlug(idOrSlug)) throw new Error(`Post not found: ${idOrSlug}`);
+    if (!isSlug(idOrSlug)) throw new Error(`Post not found: "${idOrSlug}". Run \`paragraph post list --json\` to see your posts, or use the full \`@publication/slug\` form for posts outside your publication.`);
   }
   await client.posts.update({ slug: idOrSlug, ...body });
 }

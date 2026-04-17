@@ -1,6 +1,9 @@
 import * as fs from "fs";
 import { addSubscriberBody } from "@paragraph-com/sdk/zod";
-import type { ListSubscribers200ItemsItem } from "@paragraph-com/sdk";
+import {
+  ParagraphApiError,
+  type ListSubscribers200ItemsItem,
+} from "@paragraph-com/sdk";
 import { createClient } from "./client.js";
 
 export interface PaginatedResult<T> {
@@ -24,6 +27,16 @@ export async function getSubscriberCount(
   publicationId: string
 ): Promise<number> {
   const client = createClient();
+  try {
+    await client.publications.get({ id: publicationId }).single();
+  } catch (err) {
+    if (err instanceof ParagraphApiError && err.status === 404) {
+      throw new Error(
+        `Invalid publication ID "${publicationId}". Run \`paragraph whoami --json\` to get the valid publication ID.`
+      );
+    }
+    throw err;
+  }
   const result = await client.subscribers.getCount({ id: publicationId });
   return (result as { count: number }).count || 0;
 }

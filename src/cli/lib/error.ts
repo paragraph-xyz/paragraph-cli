@@ -32,8 +32,11 @@ function extractError(err: unknown): { message: string; status?: number; code: s
     const message = data?.message || err.message;
     if (status === 401) {
       return { message: "Unauthorized. Check your API key or run `paragraph login`.", status, code: errorCode(status) };
+    } else if (status === 403) {
+      return { message: "Forbidden. Your API key doesn't have access to this resource. Run `paragraph whoami --json` to verify which publication the key is for.", status, code: errorCode(status) };
     } else if (status === 404) {
-      return { message: "Not found. " + (message || ""), status, code: errorCode(status) };
+      const detail = message ? `${message}. ` : "";
+      return { message: `Not found. ${detail}Verify the identifier is correct — use the matching list command (e.g. \`paragraph post list --json\`, \`paragraph subscriber list --json\`) to find valid values.`, status, code: errorCode(status) };
     } else if (status === 429) {
       return { message: "Rate limited. Please wait and try again.", status, code: errorCode(status) };
     }

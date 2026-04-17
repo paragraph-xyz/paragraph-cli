@@ -5,7 +5,7 @@ export function requireArg(
   flagName = "--id"
 ): string {
   if (positional && flag && positional !== flag) {
-    throw new Error(`Conflicting values for ${name}: "${positional}" (argument) vs "${flag}" (${flagName}).`);
+    throw new Error(`Conflicting values for ${name}: "${positional}" (argument) vs "${flag}" (${flagName}). Pass only one.`);
   }
   const value = positional || flag;
   if (!value) throw new Error(`Missing ${name}. Pass it as an argument or with ${flagName}.`);

@@ -20,10 +20,11 @@ export function requireApiKey(flagToken?: string): string {
 
 export async function validateApiKey(
   token: string
-): Promise<{ name?: string; slug?: string; customDomain?: string }> {
+): Promise<{ id?: string; name?: string; slug?: string; customDomain?: string }> {
   const client = createClient(token);
   const me = (await client.me.get()) as Record<string, unknown>;
   return {
+    id: me.id as string | undefined,
     name: me.name as string | undefined,
     slug: me.slug as string | undefined,
     customDomain: me.customDomain as string | undefined,
