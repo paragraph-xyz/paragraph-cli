@@ -162,6 +162,29 @@ paragraph user get <user-id>
 paragraph user get 0x1234...    # by wallet address
 ```
 
+### Analytics
+
+Run read-only SQL against your publication's analytics schema (open rates, CTR, subscriber counts, post views, engagement, etc.). Queries are scoped to your publication automatically -- no blog ID filter needed.
+
+```bash
+# Discover available tables and columns
+paragraph analytics schema
+
+# One-liner
+paragraph analytics query "SELECT active_subscriber_count FROM blog_subscriber_counts"
+
+# From a file (useful for multi-line queries)
+paragraph analytics query --file ./top-posts.sql
+
+# Piped from stdin
+cat query.sql | paragraph analytics query
+
+# JSON + jq
+paragraph analytics query "SELECT title, open_rate FROM post_analytics_summary LIMIT 5" --json | jq '.rows'
+```
+
+Rules: `SELECT` / `WITH` (CTE) only, no semicolons, 30-second timeout, 10,000-row cap. Prefer the pre-aggregated views (`post_analytics_summary`, `subscriber_engagement_scores`, `blog_subscriber_counts`) over raw tables for speed.
+
 ## Interactive TUI
 
 Running `paragraph` with no arguments launches an interactive terminal UI with menus, scrollable lists, and keyboard navigation.

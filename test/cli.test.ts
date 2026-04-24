@@ -28,6 +28,7 @@ describe("CLI program", () => {
     expect(names).toContain("subscriber");
     expect(names).toContain("coin");
     expect(names).toContain("user");
+    expect(names).toContain("analytics");
   });
 
   it("registers top-level aliases for create, update, delete", () => {
@@ -114,6 +115,30 @@ describe("CLI program", () => {
       const get = coin.commands.find((c) => c.name() === "get")!;
       const opts = get.options.map((o) => o.long);
       expect(opts).toContain("--id");
+    });
+  });
+
+  describe("analytics subcommands", () => {
+    it("registers query and schema subcommands", () => {
+      const analytics = program.commands.find((c) => c.name() === "analytics")!;
+      const names = analytics.commands.map((c) => c.name());
+      expect(names).toContain("query");
+      expect(names).toContain("schema");
+    });
+
+    it("analytics query has --sql and --file flags", () => {
+      const analytics = program.commands.find((c) => c.name() === "analytics")!;
+      const query = analytics.commands.find((c) => c.name() === "query")!;
+      const opts = query.options.map((o) => o.long);
+      expect(opts).toContain("--sql");
+      expect(opts).toContain("--file");
+    });
+
+    it("analytics schema takes no required options", () => {
+      const analytics = program.commands.find((c) => c.name() === "analytics")!;
+      const schema = analytics.commands.find((c) => c.name() === "schema")!;
+      const required = schema.options.filter((o) => o.required);
+      expect(required).toHaveLength(0);
     });
   });
 
