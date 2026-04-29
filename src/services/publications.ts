@@ -1,4 +1,9 @@
-import type { GetPublicationById200 } from "@paragraph-com/sdk";
+import { updatePublicationBody } from "@paragraph-com/sdk/zod";
+import type {
+  GetPublicationById200,
+  UpdatePublication200,
+  UpdatePublicationBody,
+} from "@paragraph-com/sdk";
 import { createClient } from "./client.js";
 
 export async function getPublication(
@@ -32,4 +37,14 @@ export async function resolvePublication(
     return getPublicationByDomain(identifier);
   }
   return getPublication(identifier, apiKey);
+}
+
+export async function updatePublication(
+  publicationId: string,
+  body: UpdatePublicationBody,
+  apiKey: string
+): Promise<UpdatePublication200> {
+  updatePublicationBody.parse(body);
+  const client = createClient(apiKey);
+  return client.publications.update(publicationId, body);
 }

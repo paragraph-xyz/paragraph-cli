@@ -3,6 +3,7 @@ import { requireApiKey } from "../../services/auth.js";
 import * as subscribers from "../../services/subscribers.js";
 import { outputData, outputTable, writeSuccess, writeInfo, parseLimit } from "../lib/output.js";
 import { handleError } from "../lib/error.js";
+import { confirm } from "../lib/prompt.js";
 import { formatDate } from "../lib/args.js";
 
 export function registerSubscriberCommands(program: Command): void {
@@ -95,6 +96,51 @@ Examples:
         await subscribers.addSubscriber({ email: opts.email, wallet: opts.wallet }, apiKey);
         writeSuccess(`Subscriber added: ${opts.email || opts.wallet}`);
         outputData(this, { Email: opts.email, Wallet: opts.wallet }, { email: opts.email, wallet: opts.wallet, added: true });
+      } catch (err) {
+        handleError(err);
+      }
+    });
+
+  subscriber
+    .command("remove")
+    .description("Remove a subscriber by email or wallet address (hard delete, irreversible)")
+    .option("--email <email>", "Subscriber email address")
+    .option("--wallet <address>", "Subscriber wallet address (0x format)")
+    .option("--yes", "Skip confirmation prompt")
+    .addHelpText("after", `
+Examples:
+  $ paragraph subscriber remove --email user@example.com
+  $ paragraph subscriber remove --wallet 0x1234...abcd
+  $ paragraph subscriber remove --email user@example.com --yes
+  $ paragraph subscriber remove --email user@example.com --json --yes`)
+    .action(async function (this: Command, opts) {
+      try {
+        if (!opts.email && !opts.wallet) {
+          throw new Error("Provide --email or --wallet (or both).");
+        }
+        const apiKey = requireApiKey();
+        const target = opts.email || opts.wallet;
+
+        if (!opts.yes) {
+          const ok = await confirm(
+            `Permanently remove subscriber ${target}? This cannot be undone.`
+          );
+          if (!ok) {
+            writeInfo("Cancelled.");
+            return;
+          }
+        }
+
+        await subscribers.removeSubscriber(
+          { email: opts.email, wallet: opts.wallet },
+          apiKey
+        );
+        writeSuccess(`Subscriber removed: ${target}`);
+        outputData(
+          this,
+          { Email: opts.email, Wallet: opts.wallet },
+          { email: opts.email, wallet: opts.wallet, removed: true }
+        );
       } catch (err) {
         handleError(err);
       }

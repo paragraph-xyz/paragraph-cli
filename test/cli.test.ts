@@ -28,6 +28,7 @@ describe("CLI program", () => {
     expect(names).toContain("subscriber");
     expect(names).toContain("coin");
     expect(names).toContain("user");
+    expect(names).toContain("analytics");
   });
 
   it("registers top-level aliases for create, update, delete", () => {
@@ -105,6 +106,64 @@ describe("CLI program", () => {
       const count = sub.commands.find((c) => c.name() === "count")!;
       const opts = count.options.map((o) => o.long);
       expect(opts).toContain("--publication");
+    });
+
+    it("registers subscriber remove with --email, --wallet, --yes", () => {
+      const sub = program.commands.find((c) => c.name() === "subscriber")!;
+      const remove = sub.commands.find((c) => c.name() === "remove")!;
+      expect(remove).toBeDefined();
+      const opts = remove.options.map((o) => o.long);
+      expect(opts).toContain("--email");
+      expect(opts).toContain("--wallet");
+      expect(opts).toContain("--yes");
+    });
+  });
+
+  describe("publication subcommands", () => {
+    it("registers publication update with key flags", () => {
+      const pub = program.commands.find((c) => c.name() === "publication")!;
+      const update = pub.commands.find((c) => c.name() === "update")!;
+      expect(update).toBeDefined();
+      const opts = update.options.map((o) => o.long);
+      expect(opts).toContain("--from-json");
+      expect(opts).toContain("--name");
+      expect(opts).toContain("--featured-post");
+      expect(opts).toContain("--pinned-post-ids");
+      expect(opts).toContain("--disable-comments");
+      expect(opts).toContain("--email-notifications");
+    });
+  });
+
+  describe("analytics subcommands", () => {
+    it("registers analytics query and schema", () => {
+      const analytics = program.commands.find((c) => c.name() === "analytics")!;
+      const names = analytics.commands.map((c) => c.name());
+      expect(names).toContain("query");
+      expect(names).toContain("schema");
+    });
+
+    it("analytics query accepts --sql and --file", () => {
+      const analytics = program.commands.find((c) => c.name() === "analytics")!;
+      const query = analytics.commands.find((c) => c.name() === "query")!;
+      const opts = query.options.map((o) => o.long);
+      expect(opts).toContain("--sql");
+      expect(opts).toContain("--file");
+    });
+
+    it("analytics schema accepts --table", () => {
+      const analytics = program.commands.find((c) => c.name() === "analytics")!;
+      const schema = analytics.commands.find((c) => c.name() === "schema")!;
+      const opts = schema.options.map((o) => o.long);
+      expect(opts).toContain("--table");
+    });
+  });
+
+  describe("post update --published-at", () => {
+    it("post update accepts --published-at", () => {
+      const post = program.commands.find((c) => c.name() === "post")!;
+      const update = post.commands.find((c) => c.name() === "update")!;
+      const opts = update.options.map((o) => o.long);
+      expect(opts).toContain("--published-at");
     });
   });
 

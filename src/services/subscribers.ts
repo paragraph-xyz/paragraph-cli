@@ -1,5 +1,5 @@
 import * as fs from "fs";
-import { addSubscriberBody } from "@paragraph-com/sdk/zod";
+import { addSubscriberBody, removeSubscriberBody } from "@paragraph-com/sdk/zod";
 import {
   ParagraphApiError,
   type ListSubscribers200ItemsItem,
@@ -48,6 +48,15 @@ export async function addSubscriber(
   addSubscriberBody.parse(params);
   const client = createClient(apiKey);
   await client.subscribers.create(params);
+}
+
+export async function removeSubscriber(
+  params: { email?: string; wallet?: string },
+  apiKey: string
+): Promise<void> {
+  removeSubscriberBody.parse(params);
+  const client = createClient(apiKey);
+  await client.subscribers.remove(params);
 }
 
 export async function importSubscribers(

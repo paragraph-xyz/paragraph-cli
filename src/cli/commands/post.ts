@@ -211,20 +211,33 @@ Examples:
       .option("--file <path>", "Read post content from a file")
       .option("--subtitle <subtitle>", "Post subtitle")
       .option("--tags <tags>", "Comma-separated tags")
+      .option("--published-at <time>", "Set the post's display publish date (ISO 8601 or Unix ms). Sticks across re-publishes — useful for backdating.")
       .addHelpText("after", `
 Examples:
   $ paragraph post update my-post --title "New Title"
   $ paragraph post update --id my-post --title "New Title"
   $ paragraph post update my-post --file ./updated.md
   $ cat updated.md | paragraph post update my-post
-  $ paragraph post update my-post --tags "web3,defi" --json`)
+  $ paragraph post update my-post --tags "web3,defi" --json
+  $ paragraph post update my-post --published-at "2024-01-01T00:00:00Z"`)
       .action(async function (this: Command, idOrSlug: string | undefined, opts) {
         try {
           const id = requireArg(idOrSlug, opts.id, "post ID or slug");
           const apiKey = requireApiKey();
           const markdown = await resolveMarkdown(opts);
-          if (!opts.title && !opts.subtitle && !markdown && !opts.tags) {
-            throw new Error("Nothing to update. Provide --title, --subtitle, --text, --file, or --tags.");
+          const publishedAt = opts.publishedAt
+            ? parseScheduleTime(opts.publishedAt)
+            : undefined;
+          if (
+            !opts.title &&
+            !opts.subtitle &&
+            !markdown &&
+            !opts.tags &&
+            publishedAt === undefined
+          ) {
+            throw new Error(
+              "Nothing to update. Provide --title, --subtitle, --text, --file, --tags, or --published-at."
+            );
           }
           await posts.updatePost(id, {
             apiKey,
@@ -234,9 +247,20 @@ Examples:
             tags: opts.tags
               ?.split(",")
               .map((t: string) => t.trim()),
+            publishedAt,
           });
           writeSuccess(`Post updated: ${id}`);
-          outputData(this, { ID: id }, { id, updated: true, title: opts.title, subtitle: opts.subtitle });
+          outputData(
+            this,
+            { ID: id },
+            {
+              id,
+              updated: true,
+              title: opts.title,
+              subtitle: opts.subtitle,
+              publishedAt,
+            }
+          );
         } catch (err) {
           handleError(err);
         }
