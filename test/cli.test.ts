@@ -29,6 +29,7 @@ describe("CLI program", () => {
     expect(names).toContain("coin");
     expect(names).toContain("user");
     expect(names).toContain("analytics");
+    expect(names).toContain("email");
   });
 
   it("registers top-level aliases for create, update, delete", () => {
@@ -155,6 +156,26 @@ describe("CLI program", () => {
       const schema = analytics.commands.find((c) => c.name() === "schema")!;
       const opts = schema.options.map((o) => o.long);
       expect(opts).toContain("--table");
+    });
+  });
+
+  describe("email subcommands", () => {
+    it("registers email send", () => {
+      const email = program.commands.find((c) => c.name() === "email")!;
+      const names = email.commands.map((c) => c.name());
+      expect(names).toContain("send");
+    });
+
+    it("email send has --subject, --body, --body-file, --to, --dry-run, --yes", () => {
+      const email = program.commands.find((c) => c.name() === "email")!;
+      const send = email.commands.find((c) => c.name() === "send")!;
+      const opts = send.options.map((o) => o.long);
+      expect(opts).toContain("--subject");
+      expect(opts).toContain("--body");
+      expect(opts).toContain("--body-file");
+      expect(opts).toContain("--to");
+      expect(opts).toContain("--dry-run");
+      expect(opts).toContain("--yes");
     });
   });
 
