@@ -212,6 +212,8 @@ Examples:
       .option("--subtitle <subtitle>", "Post subtitle")
       .option("--tags <tags>", "Comma-separated tags")
       .option("--published-at <time>", "Set the post's display publish date (ISO 8601 or Unix ms). Sticks across re-publishes — useful for backdating.")
+      .option("--image-url <url>", "URL of an image to set as the post's cover. Fetched server-side, re-hosted on Paragraph's CDN.")
+      .option("--clear-image", "Remove the post's existing cover image. Ignored if --image-url is also provided.")
       .addHelpText("after", `
 Examples:
   $ paragraph post update my-post --title "New Title"
@@ -219,7 +221,9 @@ Examples:
   $ paragraph post update my-post --file ./updated.md
   $ cat updated.md | paragraph post update my-post
   $ paragraph post update my-post --tags "web3,defi" --json
-  $ paragraph post update my-post --published-at "2024-01-01T00:00:00Z"`)
+  $ paragraph post update my-post --published-at "2024-01-01T00:00:00Z"
+  $ paragraph post update my-post --image-url https://example.com/cover.jpg
+  $ paragraph post update my-post --clear-image`)
       .action(async function (this: Command, idOrSlug: string | undefined, opts) {
         try {
           const id = requireArg(idOrSlug, opts.id, "post ID or slug");
@@ -233,10 +237,12 @@ Examples:
             !opts.subtitle &&
             !markdown &&
             !opts.tags &&
-            publishedAt === undefined
+            publishedAt === undefined &&
+            !opts.imageUrl &&
+            !opts.clearImage
           ) {
             throw new Error(
-              "Nothing to update. Provide --title, --subtitle, --text, --file, --tags, or --published-at."
+              "Nothing to update. Provide --title, --subtitle, --text, --file, --tags, --published-at, --image-url, or --clear-image."
             );
           }
           await posts.updatePost(id, {
@@ -248,6 +254,8 @@ Examples:
               ?.split(",")
               .map((t: string) => t.trim()),
             publishedAt,
+            imageUrl: opts.imageUrl,
+            clearImage: opts.clearImage,
           });
           writeSuccess(`Post updated: ${id}`);
           outputData(

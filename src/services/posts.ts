@@ -188,6 +188,8 @@ export async function updatePost(
     subtitle?: string;
     tags?: string[];
     publishedAt?: number;
+    imageUrl?: string;
+    clearImage?: boolean;
   }
 ): Promise<void> {
   const body = {
@@ -196,6 +198,8 @@ export async function updatePost(
     markdown: params.markdown,
     categories: params.tags,
     publishedAt: params.publishedAt,
+    imageUrl: params.imageUrl,
+    clearImage: params.clearImage,
   };
   updatePostBody.parse(body);
   const client = createClient(params.apiKey);
