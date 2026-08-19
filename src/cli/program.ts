@@ -8,6 +8,7 @@ import { registerCoinCommands } from "./commands/coin.js";
 import { registerUserCommands } from "./commands/user.js";
 import { registerAnalyticsCommands } from "./commands/analytics.js";
 import { registerEmailCommands } from "./commands/email.js";
+import { registerContentCommands } from "./commands/content.js";
 
 declare const process: NodeJS.Process & { env: { CLI_VERSION?: string } };
 
@@ -43,6 +44,7 @@ export function createProgram(): Command {
   registerUserCommands(program);
   registerAnalyticsCommands(program);
   registerEmailCommands(program);
+  registerContentCommands(program);
 
   return program;
 }
