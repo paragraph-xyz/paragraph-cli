@@ -30,6 +30,7 @@ describe("CLI program", () => {
     expect(names).toContain("user");
     expect(names).toContain("analytics");
     expect(names).toContain("email");
+    expect(names).toContain("content");
   });
 
   it("registers top-level aliases for create, update, delete", () => {
@@ -130,7 +131,6 @@ describe("CLI program", () => {
       expect(opts).toContain("--name");
       expect(opts).toContain("--featured-post");
       expect(opts).toContain("--pinned-post-ids");
-      expect(opts).toContain("--disable-comments");
       expect(opts).toContain("--email-notifications");
     });
   });
@@ -176,6 +176,70 @@ describe("CLI program", () => {
       expect(opts).toContain("--to");
       expect(opts).toContain("--dry-run");
       expect(opts).toContain("--yes");
+    });
+  });
+
+  describe("content subcommands", () => {
+    it("registers all content subcommands", () => {
+      const content = program.commands.find((c) => c.name() === "content")!;
+      const names = content.commands.map((c) => c.name());
+      expect(names).toContain("create");
+      expect(names).toContain("list");
+      expect(names).toContain("get");
+      expect(names).toContain("update");
+      expect(names).toContain("archive");
+      expect(names).toContain("restore");
+    });
+
+    it("content create has --kind, --title, and the body flags", () => {
+      const content = program.commands.find((c) => c.name() === "content")!;
+      const create = content.commands.find((c) => c.name() === "create")!;
+      const opts = create.options.map((o) => o.long);
+      expect(opts).toContain("--kind");
+      expect(opts).toContain("--title");
+      expect(opts).toContain("--text");
+      expect(opts).toContain("--file");
+      expect(opts).toContain("--tweet");
+      expect(opts).toContain("--subject");
+      expect(opts).toContain("--preheader");
+      expect(opts).toContain("--headline");
+      expect(opts).toContain("--canonical-url");
+    });
+
+    it("content list has --kind, --status, --limit, --cursor", () => {
+      const content = program.commands.find((c) => c.name() === "content")!;
+      const list = content.commands.find((c) => c.name() === "list")!;
+      const opts = list.options.map((o) => o.long);
+      expect(opts).toContain("--kind");
+      expect(opts).toContain("--status");
+      expect(opts).toContain("--limit");
+      expect(opts).toContain("--cursor");
+    });
+
+    it("content get accepts --id and --field", () => {
+      const content = program.commands.find((c) => c.name() === "content")!;
+      const get = content.commands.find((c) => c.name() === "get")!;
+      const opts = get.options.map((o) => o.long);
+      expect(opts).toContain("--id");
+      expect(opts).toContain("--field");
+    });
+
+    it("content archive has --dry-run and --id", () => {
+      const content = program.commands.find((c) => c.name() === "content")!;
+      const archive = content.commands.find((c) => c.name() === "archive")!;
+      const opts = archive.options.map((o) => o.long);
+      expect(opts).toContain("--dry-run");
+      expect(opts).toContain("--id");
+    });
+
+    it("content create has afterHelp examples", () => {
+      const content = program.commands.find((c) => c.name() === "content")!;
+      const create = content.commands.find((c) => c.name() === "create")!;
+      let output = "";
+      create.configureOutput({ writeOut: (str) => { output += str; } });
+      create.outputHelp();
+      expect(output).toContain("Examples:");
+      expect(output).toContain("paragraph content create");
     });
   });
 

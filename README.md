@@ -120,6 +120,38 @@ paragraph update my-post-slug --title "Updated"
 paragraph delete my-post-slug --yes
 ```
 
+### Content
+
+Drafted short-form content: X posts and threads, LinkedIn posts, one-off emails, and X Articles. These commands only draft — nothing is posted, emailed, or scheduled. Send the piece from the Paragraph app.
+
+```bash
+# Create a draft -- --kind is tweet, linkedin, newsletter, or x_article
+paragraph content create --kind tweet --title "Launch note" --text "We shipped it."
+paragraph content create --kind tweet --title "Thread" --tweet "First." --tweet "Second."
+paragraph content create --kind linkedin --title "Launch note" --file ./post.md
+paragraph content create --kind newsletter --title "October update" --subject "What we shipped" --file ./body.md
+paragraph content create --kind x_article --title "Editor rewrite" --headline "Why we rebuilt the editor" --file ./article.md
+cat post.md | paragraph content create --kind linkedin --title "Launch note"
+
+# List -- --status defaults to all, which excludes archived pieces
+paragraph content list
+paragraph content list --kind tweet --status draft --limit 50
+paragraph content list --status archived
+
+# Get one piece, with its body
+paragraph content get <id>
+paragraph content get <id> --field body
+
+# Rename, replace the body, or both. The body is replaced, not merged.
+paragraph content update <id> --title "Launch note, second pass"
+paragraph content update <id> --text "Rewritten, and shorter."
+
+# Archive and restore
+paragraph content archive <id>
+paragraph content archive <id> --dry-run
+paragraph content restore <id>
+```
+
 ### Publications
 
 ```bash

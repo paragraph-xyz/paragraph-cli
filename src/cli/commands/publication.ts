@@ -56,7 +56,6 @@ Examples:
     .option("--post-list-type <type>", "Homepage layout: feed | grid | full-post")
     .option("--featured-post <selector>", "Post ID, or 'latest' | 'popular' | 'disabled'")
     .option("--pinned-post-ids <ids>", "Comma-separated post IDs to pin (max 50, replaces existing list)")
-    .option("--disable-comments <value>", "Comment visibility: true | false | on-platform")
     .option(
       "--email-notifications <pairs>",
       "Owner email toggles as key=value,... (keys: newComment, newSubscriber, newPaidSubscriber, newContentCollected)"
@@ -66,7 +65,6 @@ Examples:
   $ paragraph publication update abc123 --name "My Blog" --theme-color purple-600
   $ paragraph publication update abc123 --featured-post latest
   $ paragraph publication update abc123 --pinned-post-ids id1,id2,id3
-  $ paragraph publication update abc123 --disable-comments on-platform
   $ paragraph publication update abc123 --email-notifications newSubscriber=true,newComment=false
   $ paragraph publication update abc123 --from-json ./settings.json
   $ paragraph publication update abc123 --from-json ./base.json --name "Override Name"`)
@@ -111,17 +109,6 @@ Examples:
             );
           }
           body.pinnedPostIds = ids;
-        }
-
-        if (opts.disableComments !== undefined) {
-          const v = opts.disableComments;
-          if (v === "true") body.disableComments = true;
-          else if (v === "false") body.disableComments = false;
-          else if (v === "on-platform") body.disableComments = "on-platform";
-          else
-            throw new Error(
-              `--disable-comments must be 'true', 'false', or 'on-platform' (got "${v}").`
-            );
         }
 
         if (opts.emailNotifications !== undefined) {
