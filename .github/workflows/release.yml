@@ -22,13 +22,18 @@ jobs:
 
       - uses: actions/setup-node@v4
         with:
-          node-version: "20"
+          node-version: "22"
           registry-url: "https://registry.npmjs.org"
 
-      # Node 20 ships npm 10, which predates trusted publishing (npm 11.5.1+).
-      # Without this the publish step looks for a token that doesn't exist.
+      # Trusted publishing needs npm 11.5.1+, and the npm bundled with Node
+      # ships older than that — without this the publish step looks for a token
+      # that doesn't exist.
+      #
+      # Pinned to the 11 major rather than @latest: npm 12 requires Node
+      # ^22.22.2 || ^24.15.0 || >=26, so `@latest` breaks this job every time
+      # npm ships a major that outruns the Node line above. Raise both together.
       - name: Upgrade npm for trusted publishing
-        run: npm install -g npm@latest
+        run: npm install -g npm@11
 
       # `npm ci` so the published artifact is built against the versions the
       # lockfile pins, not whatever satisfies the ranges on the day of the
