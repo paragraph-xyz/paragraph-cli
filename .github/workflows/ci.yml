@@ -18,19 +18,19 @@ jobs:
         with:
           node-version: ${{ matrix.node-version }}
           cache: npm
-      # `npm install` WITHOUT deleting the lockfile first. Deleting it (the
-      # previous behavior) re-resolved every range on each run, so a
+      # `npm ci` rather than deleting the lockfile and reinstalling. Deleting it
+      # (the previous behavior) re-resolved every range on each run, so a
       # semver-compatible SDK release could change what CI tested with nothing
       # recording it — that is how the updatePublicationBody field removal
-      # reached a release unnoticed (PAR-10415). Keeping the lockfile pins the
-      # versions.
+      # reached a release unnoticed (PAR-10415).
       #
-      # Not `npm ci`: this lockfile is generated on macOS and npm omits the
-      # other platforms' optional binaries from it (npm/cli#4828), so a strict
-      # install on Linux dies at `Cannot find module
-      # @rollup/rollup-linux-x64-gnu`. `npm install` honors the locked versions
-      # and still resolves the host's binaries.
-      - run: npm install
+      # Deleting it was a workaround for npm/cli#4828: a lockfile written by
+      # npm 10 records only the host platform's optional binaries, so `npm ci`
+      # on Linux died at `Cannot find module @rollup/rollup-linux-x64-gnu`. The
+      # lockfile has been regenerated with npm 11, which records every
+      # platform, so the strict install now works and the workaround is gone.
+      # Regenerate with npm 11+ or that failure comes back.
+      - run: npm ci
       - run: npx tsc --noEmit
       - run: npm run build
       - run: node dist/index.js --version

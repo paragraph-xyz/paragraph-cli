@@ -34,11 +34,10 @@ fi
 # Pull latest
 git pull --rebase
 
-# Keep the lockfile: the local check should run against the pinned versions,
-# the same ones CI builds the published artifact from. (Not `npm ci` — see the
-# npm/cli#4828 note in .github/workflows/release.yml.)
+# `npm ci` so the local check runs against the pinned dependency versions, the
+# same ones CI builds the published artifact from.
 echo "=> Installing dependencies..."
-npm install
+npm ci
 
 # Build and test locally before tagging. CI runs these again, but failing here
 # costs a rerun instead of a published-then-yanked version.
