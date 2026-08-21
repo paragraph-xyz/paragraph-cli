@@ -1,0 +1,110 @@
+name: Homebrew
+
+# Points paragraph-xyz/homebrew-tap at a released version.
+#
+# Reusable (workflow_call) so Release invokes it after publishing, and
+# dispatchable (workflow_dispatch) so a failed tap update can be retried on its
+# own — re-running Release would try to republish a version npm has already
+# accepted, which always fails.
+#
+# It reads the tarball back off the GitHub release rather than taking it from
+# the publish job, so a manual run needs nothing but a version.
+on:
+  workflow_call:
+    inputs:
+      version:
+        required: true
+        type: string
+  workflow_dispatch:
+    inputs:
+      version:
+        description: "Release tag to point the formula at (e.g. v0.3.2). Defaults to the latest release."
+        required: false
+        type: string
+
+jobs:
+  update-formula:
+    runs-on: ubuntu-latest
+    steps:
+      # Pushing to paragraph-xyz/homebrew-tap is a cross-repo write, which the
+      # per-run GITHUB_TOKEN cannot do. Skipped rather than failed when the
+      # secret is absent, so npm releases don't go red over the tap.
+      - name: Check for tap credentials
+        id: creds
+        env:
+          HOMEBREW_TAP_TOKEN: ${{ secrets.HOMEBREW_TAP_TOKEN }}
+        run: |
+          if [[ -n "$HOMEBREW_TAP_TOKEN" ]]; then
+            echo "ready=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "ready=false" >> "$GITHUB_OUTPUT"
+            echo "::notice::HOMEBREW_TAP_TOKEN not set - skipping tap update. Update Formula/paragraph.rb by hand to ship this version over brew."
+          fi
+
+      - name: Update formula
+        if: steps.creds.outputs.ready == 'true'
+        env:
+          GH_TOKEN: ${{ secrets.HOMEBREW_TAP_TOKEN }}
+          INPUT_VERSION: ${{ inputs.version }}
+          SOURCE_REPO: ${{ github.repository }}
+        run: |
+          set -euo pipefail
+
+          VERSION="$INPUT_VERSION"
+          if [[ -z "$VERSION" ]]; then
+            VERSION="$(gh release view --repo "$SOURCE_REPO" --json tagName --jq .tagName)"
+          fi
+          TARBALL="paragraph-cli-${VERSION}.tgz"
+          URL="https://github.com/${SOURCE_REPO}/releases/download/${VERSION}/${TARBALL}"
+          echo "Pointing the formula at $VERSION"
+
+          # Hash the asset that is actually published, so the formula can never
+          # disagree with what brew will download.
+          gh release download "$VERSION" --repo "$SOURCE_REPO" --pattern "$TARBALL" --output "$TARBALL"
+          SHA256="$(sha256sum "$TARBALL" | awk '{print $1}')"
+
+          # gh leaves the clone on a plain https remote with no credentials, so
+          # a later `git push` dies at "could not read Username for
+          # https://github.com". This installs gh as git's credential helper.
+          gh auth setup-git
+
+          FORMULA_DIR="$(mktemp -d)"
+          gh repo clone paragraph-xyz/homebrew-tap "$FORMULA_DIR"
+
+          mkdir -p "$FORMULA_DIR/Formula"
+          # Quoted heredoc: the #{...} below are Ruby interpolations that must
+          # reach the formula intact, not shell expansions.
+          cat > "$FORMULA_DIR/Formula/paragraph.rb" <<'RUBY'
+          class Paragraph < Formula
+            desc "CLI for Paragraph — manage posts, subscribers, and publications"
+            homepage "https://github.com/paragraph-xyz/paragraph-cli"
+            url "__URL__"
+            sha256 "__SHA256__"
+            license "MIT"
+
+            depends_on "node"
+
+            def install
+              system "npm", "install", *std_npm_args
+              bin.install_symlink Dir["#{libexec}/bin/*"]
+            end
+
+            test do
+              assert_match version.to_s, shell_output("#{bin}/paragraph --version").strip
+            end
+          end
+          RUBY
+
+          sed -i "s|__URL__|${URL}|; s|__SHA256__|${SHA256}|" "$FORMULA_DIR/Formula/paragraph.rb"
+
+          cd "$FORMULA_DIR"
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git add -A
+          # A re-run with the same version is a no-op, not a failure.
+          if git diff --staged --quiet; then
+            echo "Formula already points at ${VERSION}"
+            exit 0
+          fi
+          git commit -m "paragraph ${VERSION}"
+          git push
