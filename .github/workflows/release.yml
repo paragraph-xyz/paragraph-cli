@@ -30,11 +30,16 @@ jobs:
       - name: Upgrade npm for trusted publishing
         run: npm install -g npm@latest
 
-      # `npm ci` rather than `npm install`: the published artifact must be built
-      # against the SDK version the lockfile pins, not whatever satisfies the
-      # range on the day of the release.
+      # `npm install` with the lockfile in place, so the published artifact is
+      # built against the versions it pins rather than whatever satisfies the
+      # ranges on the day of the release.
+      #
+      # Not `npm ci`: this lockfile is generated on macOS and npm omits the
+      # other platforms' optional binaries from it (npm/cli#4828), so a strict
+      # install on Linux dies at `Cannot find module
+      # @rollup/rollup-linux-x64-gnu`.
       - name: Install dependencies
-        run: npm ci
+        run: npm install
 
       - name: Typecheck
         run: npx tsc --noEmit
