@@ -18,7 +18,12 @@ jobs:
         with:
           node-version: ${{ matrix.node-version }}
           cache: npm
-      - run: rm package-lock.json && npm install
+      # `npm ci` rather than deleting the lockfile and reinstalling: resolving
+      # fresh on every run meant a semver-compatible SDK release could change
+      # what CI tested without anything recording it, which is how the
+      # updatePublicationBody field removal reached a release unnoticed
+      # (PAR-10415). CI now tests the versions the lockfile pins.
+      - run: npm ci
       - run: npx tsc --noEmit
       - run: npm run build
       - run: node dist/index.js --version

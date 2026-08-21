@@ -1,0 +1,152 @@
+name: Release
+
+# Publishes on a version tag, which `npm run release` creates and pushes.
+# npm auth is OIDC (trusted publishing) rather than a token: the job proves its
+# identity to npm with the `id-token` permission below, so no NPM_TOKEN is
+# stored anywhere and a leaked secret can't publish this package.
+on:
+  push:
+    tags:
+      - "v*.*.*"
+
+jobs:
+  publish:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+      # Required for trusted publishing. Without it npm falls back to looking
+      # for a token and the publish fails as unauthenticated.
+      id-token: write
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+          registry-url: "https://registry.npmjs.org"
+
+      # Node 20 ships npm 10, which predates trusted publishing (npm 11.5.1+).
+      # Without this the publish step looks for a token that doesn't exist.
+      - name: Upgrade npm for trusted publishing
+        run: npm install -g npm@latest
+
+      # `npm ci` rather than `npm install`: the published artifact must be built
+      # against the SDK version the lockfile pins, not whatever satisfies the
+      # range on the day of the release.
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Typecheck
+        run: npx tsc --noEmit
+
+      - name: Test
+        run: npm test
+
+      - name: Build
+        run: npm run build
+
+      # No NODE_AUTH_TOKEN: OIDC supplies the credential, and provenance is
+      # attached automatically.
+      - name: Publish to npm
+        run: npm publish --access public
+
+      # The npm tarball, not a git archive: it contains the built dist/, which
+      # is what the Homebrew formula installs.
+      - name: Pack tarball for the release
+        id: pack
+        run: |
+          NPM_TARBALL="$(npm pack)"
+          RELEASE_TARBALL="paragraph-cli-${GITHUB_REF_NAME}.tgz"
+          mv "$NPM_TARBALL" "$RELEASE_TARBALL"
+          echo "tarball=$RELEASE_TARBALL" >> "$GITHUB_OUTPUT"
+          echo "sha256=$(openssl dgst -sha256 "$RELEASE_TARBALL" | awk '{print $NF}')" >> "$GITHUB_OUTPUT"
+
+      - name: Create GitHub Release
+        uses: softprops/action-gh-release@v1
+        with:
+          files: ${{ steps.pack.outputs.tarball }}
+          body: |
+            ## Install
+
+            ```bash
+            npm install -g @paragraph-com/cli@${{ github.ref_name }}
+            ```
+
+            ```bash
+            brew tap paragraph-xyz/tap
+            brew install paragraph
+            ```
+
+            **sha256:** `${{ steps.pack.outputs.sha256 }}`
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+    outputs:
+      tarball: ${{ steps.pack.outputs.tarball }}
+      sha256: ${{ steps.pack.outputs.sha256 }}
+
+  # Pushing to paragraph-xyz/homebrew-tap is a cross-repo write, which the
+  # per-run GITHUB_TOKEN cannot do. Guarded on HOMEBREW_TAP_TOKEN so the npm
+  # release above never blocks on the tap being wired up; until the secret
+  # exists this skips and says so.
+  homebrew:
+    needs: publish
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check for tap credentials
+        id: creds
+        env:
+          HOMEBREW_TAP_TOKEN: ${{ secrets.HOMEBREW_TAP_TOKEN }}
+        run: |
+          if [[ -n "$HOMEBREW_TAP_TOKEN" ]]; then
+            echo "ready=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "ready=false" >> "$GITHUB_OUTPUT"
+            echo "::notice::HOMEBREW_TAP_TOKEN not set - skipping tap update. The npm release succeeded; update Formula/paragraph.rb by hand to ship this version over brew."
+          fi
+
+      - name: Update Homebrew formula
+        if: steps.creds.outputs.ready == 'true'
+        env:
+          GH_TOKEN: ${{ secrets.HOMEBREW_TAP_TOKEN }}
+          VERSION: ${{ github.ref_name }}
+          SHA256: ${{ needs.publish.outputs.sha256 }}
+          TARBALL: ${{ needs.publish.outputs.tarball }}
+        run: |
+          set -euo pipefail
+          URL="https://github.com/paragraph-xyz/paragraph-cli/releases/download/${VERSION}/${TARBALL}"
+          FORMULA_DIR="$(mktemp -d)"
+          gh repo clone paragraph-xyz/homebrew-tap "$FORMULA_DIR"
+
+          mkdir -p "$FORMULA_DIR/Formula"
+          # Quoted heredoc: the #{...} below are Ruby interpolations that must
+          # reach the formula intact, not shell expansions.
+          cat > "$FORMULA_DIR/Formula/paragraph.rb" <<'RUBY'
+          class Paragraph < Formula
+            desc "CLI for Paragraph — manage posts, subscribers, and publications"
+            homepage "https://github.com/paragraph-xyz/paragraph-cli"
+            url "__URL__"
+            sha256 "__SHA256__"
+            license "MIT"
+
+            depends_on "node"
+
+            def install
+              system "npm", "install", *std_npm_args
+              bin.install_symlink Dir["#{libexec}/bin/*"]
+            end
+
+            test do
+              assert_match version.to_s, shell_output("#{bin}/paragraph --version").strip
+            end
+          end
+          RUBY
+
+          sed -i "s|__URL__|${URL}|; s|__SHA256__|${SHA256}|" "$FORMULA_DIR/Formula/paragraph.rb"
+
+          cd "$FORMULA_DIR"
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git add -A
+          git commit -m "paragraph ${VERSION}"
+          git push
