@@ -1,12 +1,13 @@
 import * as readline from "readline";
 import { Command } from "commander";
 import pc from "picocolors";
-import { writeConfig, deleteConfig } from "../../services/config.js";
+import { deleteConfig, writeConfig } from "../../services/config.js";
 import { requireApiKey, validateApiKey } from "../../services/auth.js";
 import {
+  acknowledgeLoginSession,
   createLoginSession,
-  waitForLogin,
   openBrowser,
+  waitForLogin,
 } from "../../services/browser-auth.js";
 import { outputData, writeSuccess, writeInfo } from "../lib/output.js";
 import { handleError } from "../lib/error.js";
@@ -31,7 +32,9 @@ async function loginWithToken(): Promise<string> {
   return token;
 }
 
-async function loginWithBrowser(): Promise<string> {
+type BrowserLogin = { token: string; sessionId: string };
+
+async function loginWithBrowser(): Promise<BrowserLogin> {
   process.stderr.write("Creating login session...\n");
   const session = await createLoginSession();
   process.stderr.write(
@@ -41,7 +44,8 @@ async function loginWithBrowser(): Promise<string> {
   // Don't block on browser open — user already has the URL
   openBrowser(session.verificationUrl).catch(() => {});
   process.stderr.write("Waiting for authentication...\n");
-  return waitForLogin(session.sessionId);
+  const token = await waitForLogin(session.sessionId);
+  return { token, sessionId: session.sessionId };
 }
 
 export function registerAuthCommands(program: Command): void {
@@ -58,6 +62,7 @@ Examples:
     .action(async (opts) => {
       try {
         let token: string;
+        let browserSessionId: string | undefined;
 
         if (opts.token) {
           token = opts.token;
@@ -82,7 +87,9 @@ Examples:
             token = await loginWithToken();
           } else {
             try {
-              token = await loginWithBrowser();
+              const login = await loginWithBrowser();
+              token = login.token;
+              browserSessionId = login.sessionId;
             } catch (err) {
               const message =
                 err instanceof Error ? err.message : String(err);
@@ -104,6 +111,9 @@ Examples:
 
         const me = await validateApiKey(token);
         writeConfig({ apiKey: token });
+        if (browserSessionId) {
+          await acknowledgeLoginSession(browserSessionId);
+        }
         writeSuccess(
           `Logged in as ${me.name || me.slug || "your publication"}`
         );

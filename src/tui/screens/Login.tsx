@@ -7,12 +7,23 @@ import { Logo } from "../components/Logo.js";
 import { useAuth } from "../hooks/useAuth.js";
 import { useNavigation } from "../hooks/useNavigation.js";
 import {
+  acknowledgeLoginSession,
   createLoginSession,
   waitForLogin,
   openBrowser,
 } from "../../services/browser-auth.js";
 
 type Step = "choose" | "browser" | "paste" | "verifying" | "done" | "error";
+
+export async function completeBrowserLogin<T>(
+  sessionId: string,
+  apiKey: string,
+  login: (token: string) => Promise<T>
+): Promise<T> {
+  const result = await login(apiKey);
+  await acknowledgeLoginSession(sessionId);
+  return result;
+}
 
 export function Login() {
   const { login } = useAuth();
@@ -35,10 +46,12 @@ export function Login() {
     }
   });
 
-  const doLogin = async (apiKey: string) => {
+  const doLogin = async (apiKey: string, sessionId?: string) => {
     setStep("verifying");
     try {
-      const me = await login(apiKey);
+      const me = sessionId
+        ? await completeBrowserLogin(sessionId, apiKey, login)
+        : await login(apiKey);
       setMessage(`Logged in as ${me.name || me.slug || "your publication"}`);
       setStep("done");
     } catch (err) {
@@ -56,7 +69,7 @@ export function Login() {
       setBrowserUrl(session.verificationUrl);
       await openBrowser(session.verificationUrl);
       const apiKey = await waitForLogin(session.sessionId, abort.signal);
-      await doLogin(apiKey);
+      await doLogin(apiKey, session.sessionId);
     } catch (err) {
       if (abort.signal.aborted) return; // cancelled by user, already back at choose
       const msg = err instanceof Error ? err.message : String(err);
