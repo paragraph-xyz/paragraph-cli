@@ -4,16 +4,32 @@ import { createClient } from "./client.js";
 
 const POLL_INTERVAL_MS = 2000;
 const POLL_TIMEOUT_MS = 5 * 60 * 1000;
+const ACK_RETRY_DELAYS_MS = [0, 250, 750];
 
 export async function createLoginSession() {
   const client = createClient();
   const deviceName = `${os.userInfo().username}@${os.hostname()}`;
-  return client.auth.createSession({ deviceName });
+  const body = { deviceName, supportsDeliveryAcknowledgement: true };
+  return client.auth.createSession(body);
 }
 
 export async function pollLoginSession(sessionId: string) {
   const client = createClient();
   return client.auth.getSession(sessionId);
+}
+
+export async function acknowledgeLoginSession(
+  sessionId: string
+): Promise<boolean> {
+  const client = createClient();
+  for (const delayMs of ACK_RETRY_DELAYS_MS) {
+    if (delayMs > 0) await sleep(delayMs);
+    try {
+      await client.auth.deleteSession(sessionId);
+      return true;
+    } catch {}
+  }
+  return false;
 }
 
 export async function waitForLogin(sessionId: string, signal?: AbortSignal): Promise<string> {
