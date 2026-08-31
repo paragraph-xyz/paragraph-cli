@@ -72,11 +72,13 @@ export async function createContent(params: {
   kind: ContentKind;
   title: string;
   body: ContentBody;
+  bucketId?: string;
 }): Promise<CreateContent200> {
   const body = {
     kind: params.kind,
     title: params.title,
     body: params.body,
+    ...(params.bucketId ? { bucketId: params.bucketId } : {}),
   };
   createContentBody.parse(body);
   const client = createClient(params.apiKey);
@@ -85,11 +87,17 @@ export async function createContent(params: {
 
 export async function updateContent(
   id: string,
-  params: { apiKey: string; title?: string; body?: ContentBody }
+  params: {
+    apiKey: string;
+    title?: string;
+    body?: ContentBody;
+    bucketId?: string;
+  }
 ): Promise<UpdateContent200> {
   const body = {
     title: params.title,
     body: params.body,
+    ...(params.bucketId ? { bucketId: params.bucketId } : {}),
   };
   updateContentBody.parse(body);
   const client = createClient(params.apiKey);

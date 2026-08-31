@@ -152,6 +152,31 @@ paragraph content archive <id> --dry-run
 paragraph content restore <id>
 ```
 
+### Content groups
+
+A group is one identity for a post and everything made out of it — the post, the thread drawn from it, the LinkedIn version, the newsletter. It's what a writer sees as a single stacked row under Content in the Paragraph app.
+
+Seed the group from the post, then draft into it with `--bucket`:
+
+```bash
+# Get or create a post's group. Safe to repeat: the same ID comes back.
+paragraph content bucket create <post-id>
+
+# Draft into it
+paragraph content create --kind tweet --title "Thread" --tweet "First." --bucket <bucket-id>
+
+# Group a draft you made earlier. A piece already grouped with a different
+# post is refused rather than moved -- ungroup it in the app first.
+paragraph content update <id> --bucket <bucket-id>
+
+# Read
+paragraph content bucket list
+paragraph content bucket get <bucket-id>
+paragraph content bucket for-post <post-id>
+```
+
+Taking a piece back out of a group is done in the app.
+
 ### Publications
 
 ```bash

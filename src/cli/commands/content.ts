@@ -1,6 +1,7 @@
 import * as fs from "fs";
 import { Command } from "commander";
 import { requireApiKey } from "../../services/auth.js";
+import * as buckets from "../../services/buckets.js";
 import * as content from "../../services/content.js";
 import {
   CONTENT_KINDS,
@@ -8,6 +9,7 @@ import {
   type ContentKind,
 } from "../../services/content.js";
 import {
+  isJsonMode,
   outputData,
   outputTable,
   parseLimit,
@@ -218,6 +220,10 @@ export function registerContentCommands(program: Command): void {
         "--title <title>",
         "What the piece is called in your library"
       )
+      .option(
+        "--bucket <bucketId>",
+        "Group this piece with the post it was made from. Get the id from `paragraph content bucket create <post-id>`"
+      )
   )
     .addHelpText(
       "after",
@@ -228,7 +234,8 @@ Examples:
   $ paragraph content create --kind linkedin --title "Launch note" --file ./post.md
   $ paragraph content create --kind newsletter --title "October update" --subject "What we shipped" --file ./body.md
   $ paragraph content create --kind x_article --title "Editor rewrite" --headline "Why we rebuilt the editor" --file ./article.md
-  $ cat post.md | paragraph content create --kind linkedin --title "Launch note" --json`
+  $ cat post.md | paragraph content create --kind linkedin --title "Launch note" --json
+  $ paragraph content create --kind tweet --title "Thread" --tweet "First." --bucket $(paragraph content bucket create abc123 --json | jq -r .bucketId)`
     )
     .action(async function (this: Command, opts) {
       try {
@@ -241,6 +248,7 @@ Examples:
           kind,
           title: opts.title,
           body,
+          bucketId: opts.bucket,
         });
 
         writeSuccess(`Draft created: ${data.title}`);
@@ -360,6 +368,10 @@ Examples:
       .description("Rename a piece of content, replace its body, or both")
       .option("--id <id>", "Content ID")
       .option("--title <title>", "New name for this piece in your library")
+      .option(
+        "--bucket <bucketId>",
+        "Group this piece with the post it was made from. A piece already grouped with a different post is refused rather than moved"
+      )
   )
     .addHelpText(
       "after",
@@ -368,6 +380,7 @@ Examples:
   $ paragraph content update abc123 --title "Launch note, second pass"
   $ paragraph content update --id abc123 --text "Rewritten, and shorter."
   $ paragraph content update abc123 --tweet "First." --tweet "Second."
+  $ paragraph content update abc123 --bucket c4e1a9d2-30b7-4f68-8a15-2d9c6b0e7f43
   $ cat rewrite.md | paragraph content update abc123 --json
 
 The body is replaced, not merged — send the whole artifact. A queued send locks
@@ -378,9 +391,9 @@ the words; renaming is always allowed.`
         const apiKey = requireApiKey();
         const contentId = requireArg(id, opts.id, "content ID");
 
-        if (!opts.title && !hasBodyFlags(opts)) {
+        if (!opts.title && !opts.bucket && !hasBodyFlags(opts)) {
           throw new Error(
-            "Nothing to update. Provide --title, or a body via --text, --file, --tweet, --subject, --preheader, --headline, or --canonical-url."
+            "Nothing to update. Provide --title, --bucket, or a body via --text, --file, --tweet, --subject, --preheader, --headline, or --canonical-url."
           );
         }
 
@@ -397,6 +410,7 @@ the words; renaming is always allowed.`
           apiKey,
           title: opts.title,
           body,
+          bucketId: opts.bucket,
         });
 
         writeSuccess(`Draft updated: ${data.title}`);
@@ -473,6 +487,159 @@ Examples:
           { ID: contentId, Status: "restored" },
           { id: contentId, restored: true }
         );
+      } catch (err) {
+        handleError(err);
+      }
+    });
+
+  registerBucketCommands(contentCmd);
+}
+
+/**
+ * Content groups: one identity for a post and everything made out of it.
+ *
+ * Nested under `content` rather than given a top-level noun, because a group
+ * only ever holds drafted content and the post it came from — it is a way of
+ * organizing the library, not a resource a writer thinks about on its own.
+ */
+function registerBucketCommands(contentCmd: Command): void {
+  const bucketCmd = contentCmd
+    .command("bucket")
+    .description(
+      "Group a post with everything made out of it, as the writer sees it under Content"
+    );
+
+  bucketCmd
+    .command("create [postId]")
+    .description("Get or create the group for a post")
+    .option("--post-id <id>", "Post ID")
+    .addHelpText(
+      "after",
+      `
+Examples:
+  $ paragraph content bucket create abc123
+  $ paragraph content bucket create --post-id abc123 --json
+
+Safe to repeat: a post that already has a group gets the same ID back. Pass the
+ID to \`content create --bucket\` on everything you draft from that post.`
+    )
+    .action(async function (this: Command, postId: string | undefined, opts) {
+      try {
+        const apiKey = requireApiKey();
+        const id = requireArg(postId, opts.postId, "post ID");
+        const data = await buckets.createPostBucket(id, apiKey);
+
+        writeSuccess(`Group ready: ${data.bucketId}`);
+        writeInfo(
+          "Pass it as --bucket on the content you draft from this post."
+        );
+        outputData(this, { "Bucket ID": data.bucketId }, data);
+      } catch (err) {
+        handleError(err);
+      }
+    });
+
+  bucketCmd
+    .command("for-post [postId]")
+    .description("Find the group a post is in, without creating one")
+    .option("--post-id <id>", "Post ID")
+    .addHelpText(
+      "after",
+      `
+Examples:
+  $ paragraph content bucket for-post abc123
+  $ paragraph content bucket for-post abc123 --json | jq -r .bucketId`
+    )
+    .action(async function (this: Command, postId: string | undefined, opts) {
+      try {
+        const apiKey = requireApiKey();
+        const id = requireArg(postId, opts.postId, "post ID");
+        const data = await buckets.getPostBucket(id, apiKey);
+
+        if (!data.bucketId) {
+          writeInfo("Nothing has been made from this post yet.");
+        }
+        outputData(this, { "Bucket ID": data.bucketId ?? "-" }, data);
+      } catch (err) {
+        handleError(err);
+      }
+    });
+
+  bucketCmd
+    .command("get [bucketId]")
+    .description("Get a group and everything already made from its post")
+    .option("--id <id>", "Bucket ID")
+    .addHelpText(
+      "after",
+      `
+Examples:
+  $ paragraph content bucket get c4e1a9d2-30b7-4f68-8a15-2d9c6b0e7f43
+  $ paragraph content bucket get c4e1a9d2-... --json | jq -r '.members[].channel'`
+    )
+    .action(async function (this: Command, bucketId: string | undefined, opts) {
+      try {
+        const apiKey = requireApiKey();
+        const id = requireArg(bucketId, opts.id, "bucket ID");
+        const data = await buckets.getBucket(id, apiKey);
+
+        // The whole group in JSON, its members as a table for a person:
+        // `outputTable` would emit only the members array, dropping the id and
+        // title a script reads the group back by.
+        if (isJsonMode(this)) {
+          outputData(this, { ID: data.id, Title: data.title }, data);
+          return;
+        }
+
+        writeInfo(`${data.title} (${data.id})`);
+        const headers = ["Channel", "Kind", "ID", "Title", "Status"];
+        const rows = data.members.map((member) => [
+          member.channel,
+          member.kind,
+          member.id,
+          member.title ?? "",
+          member.status ?? "",
+        ]);
+        outputTable(this, headers, rows, data.members);
+      } catch (err) {
+        handleError(err);
+      }
+    });
+
+  bucketCmd
+    .command("list")
+    .description("List the publication's groups, most recently active first")
+    .option("--limit <n>", "Max number of results (1-50)", "20")
+    .option("--cursor <cursor>", "Pagination cursor from a previous request")
+    .addHelpText(
+      "after",
+      `
+Examples:
+  $ paragraph content bucket list
+  $ paragraph content bucket list --limit 50 --json`
+    )
+    .action(async function (this: Command, opts) {
+      try {
+        const apiKey = requireApiKey();
+        const result = await buckets.listBuckets({
+          apiKey,
+          limit: parseLimit(opts.limit, 50),
+          cursor: opts.cursor,
+        });
+
+        const headers = ["ID", "Title", "Channels", "Updated"];
+        const rows = result.items.map((bucket) => [
+          bucket.id,
+          bucket.title,
+          bucket.members.map((member) => member.channel).join(", "),
+          new Date(bucket.updatedAt).toLocaleDateString(),
+        ]);
+
+        outputTable(this, headers, rows, result.items, {
+          cursor: result.cursor,
+        });
+        if (result.cursor) {
+          writeInfo(`Next page: --cursor ${result.cursor}`);
+        }
       } catch (err) {
         handleError(err);
       }

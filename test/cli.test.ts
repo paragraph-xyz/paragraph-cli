@@ -189,6 +189,7 @@ describe("CLI program", () => {
       expect(names).toContain("update");
       expect(names).toContain("archive");
       expect(names).toContain("restore");
+      expect(names).toContain("bucket");
     });
 
     it("content create has --kind, --title, and the body flags", () => {
@@ -204,6 +205,7 @@ describe("CLI program", () => {
       expect(opts).toContain("--preheader");
       expect(opts).toContain("--headline");
       expect(opts).toContain("--canonical-url");
+      expect(opts).toContain("--bucket");
     });
 
     it("content list has --kind, --status, --limit, --cursor", () => {
@@ -230,6 +232,22 @@ describe("CLI program", () => {
       const opts = archive.options.map((o) => o.long);
       expect(opts).toContain("--dry-run");
       expect(opts).toContain("--id");
+    });
+
+    it("content update takes --bucket, so a draft can be grouped later", () => {
+      const content = program.commands.find((c) => c.name() === "content")!;
+      const update = content.commands.find((c) => c.name() === "update")!;
+      expect(update.options.map((o) => o.long)).toContain("--bucket");
+    });
+
+    it("registers the content bucket subcommands", () => {
+      const content = program.commands.find((c) => c.name() === "content")!;
+      const bucket = content.commands.find((c) => c.name() === "bucket")!;
+      const names = bucket.commands.map((c) => c.name());
+      expect(names).toContain("create");
+      expect(names).toContain("for-post");
+      expect(names).toContain("get");
+      expect(names).toContain("list");
     });
 
     it("content create has afterHelp examples", () => {
