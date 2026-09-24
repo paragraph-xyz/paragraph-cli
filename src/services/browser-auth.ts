@@ -19,7 +19,7 @@ export async function pollLoginSession(sessionId: string) {
 }
 
 export async function acknowledgeLoginSession(
-  sessionId: string
+  sessionId: string,
 ): Promise<boolean> {
   const client = createClient();
   for (const delayMs of ACK_RETRY_DELAYS_MS) {
@@ -32,7 +32,10 @@ export async function acknowledgeLoginSession(
   return false;
 }
 
-export async function waitForLogin(sessionId: string, signal?: AbortSignal): Promise<string> {
+export async function waitForLogin(
+  sessionId: string,
+  signal?: AbortSignal,
+): Promise<string> {
   const deadline = Date.now() + POLL_TIMEOUT_MS;
 
   while (Date.now() < deadline) {
@@ -44,11 +47,13 @@ export async function waitForLogin(sessionId: string, signal?: AbortSignal): Pro
       status = await pollLoginSession(sessionId);
     } catch (err) {
       const msg = err instanceof Error ? err.message : String(err);
-      // 404 means session was denied/deleted; other errors are transient
+      // A 404 means the session was denied or deleted; other errors are transient.
       if (msg.includes("404") || msg.includes("Not found")) {
-        throw new Error("Login was denied or expired. For non-interactive use, pass the key directly: `paragraph login --token <key>` (get one at paragraph.com/settings → Publication → Developer).");
+        throw new Error(
+          "Login was denied or expired. For non-interactive use, pass the key directly: `paragraph login --token <key>` (get one at paragraph.com/settings → Publication → Developer).",
+        );
       }
-      // Transient network error — keep polling
+      // Keep polling after a transient network error.
       continue;
     }
 
@@ -56,26 +61,49 @@ export async function waitForLogin(sessionId: string, signal?: AbortSignal): Pro
       return status.apiKey;
     }
     if (status.status !== "pending") {
-      throw new Error("Login was denied or expired. For non-interactive use, pass the key directly: `paragraph login --token <key>` (get one at paragraph.com/settings → Publication → Developer).");
+      throw new Error(
+        "Login was denied or expired. For non-interactive use, pass the key directly: `paragraph login --token <key>` (get one at paragraph.com/settings → Publication → Developer).",
+      );
     }
   }
 
-  throw new Error("Login timed out after 5 minutes. For non-interactive use, pass the key directly: `paragraph login --token <key>` (get one at paragraph.com/settings → Publication → Developer).");
+  throw new Error(
+    "Login timed out after 5 minutes. For non-interactive use, pass the key directly: `paragraph login --token <key>` (get one at paragraph.com/settings → Publication → Developer).",
+  );
 }
 
-export function openBrowser(url: string): Promise<void> {
+export function openBrowser(rawUrl: string): Promise<void> {
+  const url = normalizeBrowserUrl(rawUrl);
+
   return new Promise((resolve, reject) => {
+    const callback = (err: Error | null) =>
+      err
+        ? reject(new Error(`Failed to open browser: ${err.message}`))
+        : resolve();
+
     if (process.platform === "win32") {
-      execFile("cmd.exe", ["/c", "start", "", url], (err) =>
-        err ? reject(new Error(`Failed to open browser: ${err.message}`)) : resolve()
-      );
+      // Pass the URL as an argument instead of sending it through a shell.
+      execFile("explorer.exe", [url], callback);
     } else {
       const command = process.platform === "darwin" ? "open" : "xdg-open";
-      execFile(command, [url], (err) =>
-        err ? reject(new Error(`Failed to open browser: ${err.message}`)) : resolve()
-      );
+      execFile(command, [url], callback);
     }
   });
+}
+
+function normalizeBrowserUrl(rawUrl: string): string {
+  let url: URL;
+  try {
+    url = new URL(rawUrl);
+  } catch {
+    throw new Error("Refusing to open an invalid browser URL.");
+  }
+
+  if (url.protocol !== "https:" && url.protocol !== "http:") {
+    throw new Error("Refusing to open a non-HTTP browser URL.");
+  }
+
+  return url.toString();
 }
 
 function sleep(ms: number): Promise<void> {

@@ -3,6 +3,11 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 const mocks = vi.hoisted(() => ({
   createSession: vi.fn(),
   deleteSession: vi.fn(),
+  execFile: vi.fn(),
+}));
+
+vi.mock("child_process", () => ({
+  execFile: mocks.execFile,
 }));
 
 vi.mock("../src/services/client.js", () => ({
@@ -17,11 +22,16 @@ vi.mock("../src/services/client.js", () => ({
 import {
   acknowledgeLoginSession,
   createLoginSession,
+  openBrowser,
 } from "../src/services/browser-auth.js";
 
 beforeEach(() => {
   vi.clearAllMocks();
   vi.useRealTimers();
+  mocks.execFile.mockImplementation(
+    (_command: string, _args: string[], callback: (error: null) => void) =>
+      callback(null),
+  );
 });
 
 describe("browser login acknowledgement", () => {
@@ -65,5 +75,21 @@ describe("browser login acknowledgement", () => {
 
     await expect(acknowledgement).resolves.toBe(false);
     expect(mocks.deleteSession).toHaveBeenCalledTimes(3);
+  });
+
+  it("rejects non-HTTP URLs before attempting to open them", () => {
+    expect(() => openBrowser("javascript:alert(1)")).toThrow(
+      "Refusing to open a non-HTTP browser URL.",
+    );
+    expect(mocks.execFile).not.toHaveBeenCalled();
+  });
+
+  it("opens validated HTTP URLs through the platform launcher", async () => {
+    await expect(openBrowser("https://example.com/login?state=a&b=c")).resolves.toBeUndefined();
+    expect(mocks.execFile).toHaveBeenCalledWith(
+      expect.any(String),
+      ["https://example.com/login?state=a&b=c"],
+      expect.any(Function),
+    );
   });
 });
