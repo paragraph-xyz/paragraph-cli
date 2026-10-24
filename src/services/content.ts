@@ -1,6 +1,7 @@
 import { createContentBody, updateContentBody } from "@paragraph-com/sdk/zod";
 import type {
   CreateContent200,
+  CreateContentBody,
   GetContentById200,
   ListContent200ItemsItem,
   UpdateContent200,
@@ -27,15 +28,7 @@ export const CONTENT_KINDS: ContentKind[] = [
  * same validator the Paragraph app goes through, so one mistake gets one
  * message whichever door made it.
  */
-export interface ContentBody {
-  text?: string;
-  tweets?: string[];
-  subject?: string;
-  preheader?: string;
-  body?: string;
-  title?: string;
-  canonicalUrl?: string;
-}
+export type ContentBody = CreateContentBody["body"];
 
 export async function listContent(params: {
   apiKey: string;
@@ -61,7 +54,7 @@ export async function listContent(params: {
 
 export async function getContent(
   id: string,
-  apiKey: string
+  apiKey: string,
 ): Promise<GetContentById200> {
   const client = createClient(apiKey);
   return client.content.get({ id });
@@ -92,7 +85,7 @@ export async function updateContent(
     title?: string;
     body?: ContentBody;
     bucketId?: string;
-  }
+  },
 ): Promise<UpdateContent200> {
   const body = {
     title: params.title,
@@ -106,7 +99,7 @@ export async function updateContent(
 
 export async function archiveContent(
   id: string,
-  apiKey: string
+  apiKey: string,
 ): Promise<void> {
   const client = createClient(apiKey);
   await client.content.archive({ id });
@@ -114,7 +107,7 @@ export async function archiveContent(
 
 export async function restoreContent(
   id: string,
-  apiKey: string
+  apiKey: string,
 ): Promise<void> {
   const client = createClient(apiKey);
   await client.content.restore({ id });

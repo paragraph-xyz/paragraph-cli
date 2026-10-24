@@ -1,5 +1,6 @@
 import * as fs from "fs";
 import { Command } from "commander";
+import { createContentBody } from "@paragraph-com/sdk/zod";
 import { requireApiKey } from "../../services/auth.js";
 import * as buckets from "../../services/buckets.js";
 import * as content from "../../services/content.js";
@@ -25,6 +26,7 @@ const KIND_LIST = CONTENT_KINDS.join("|");
 interface BodyOpts {
   text?: string;
   file?: string;
+  bodyJsonFile?: string;
   tweet?: string[];
   subject?: string;
   preheader?: string;
@@ -49,7 +51,7 @@ async function resolveText(opts: BodyOpts): Promise<string | undefined> {
   if (opts.file) {
     if (!fs.existsSync(opts.file)) {
       throw new Error(
-        `File not found: "${opts.file}". Check the path, or use --text <text> to pass content inline.`
+        `File not found: "${opts.file}". Check the path, or use --text <text> to pass content inline.`,
       );
     }
     return fs.readFileSync(opts.file, "utf-8");
@@ -62,6 +64,7 @@ function hasBodyFlags(opts: BodyOpts): boolean {
   return !!(
     opts.text ||
     opts.file ||
+    opts.bodyJsonFile ||
     opts.tweet?.length ||
     opts.subject ||
     opts.preheader ||
@@ -77,31 +80,63 @@ function hasBodyFlags(opts: BodyOpts): boolean {
  */
 async function buildBody(
   kind: ContentKind,
-  opts: BodyOpts
+  opts: BodyOpts,
 ): Promise<ContentBody> {
   const tweets = opts.tweet ?? [];
+  if (opts.bodyJsonFile && kind !== "newsletter") {
+    throw new Error("--body-json-file is only valid for --kind newsletter.");
+  }
 
   if (kind !== "tweet" && tweets.length > 0) {
     throw new Error("--tweet is only valid for --kind tweet.");
   }
   if (kind !== "newsletter" && (opts.subject || opts.preheader)) {
     throw new Error(
-      "--subject and --preheader are only valid for --kind newsletter."
+      "--subject and --preheader are only valid for --kind newsletter.",
     );
   }
   if (kind !== "x_article" && (opts.headline || opts.canonicalUrl)) {
     throw new Error(
-      "--headline and --canonical-url are only valid for --kind x_article."
+      "--headline and --canonical-url are only valid for --kind x_article.",
     );
   }
 
   if (kind === "tweet" && tweets.length > 0) {
     if (opts.text) {
       throw new Error(
-        "Provide --text for a single post or --tweet for a thread, not both."
+        "Provide --text for a single post or --tweet for a thread, not both.",
       );
     }
     return { tweets };
+  }
+
+  if (opts.bodyJsonFile) {
+    if (opts.text !== undefined || opts.file !== undefined) {
+      throw new Error(
+        "Provide --body-json-file or Markdown via --text/--file, not both.",
+      );
+    }
+    if (!opts.subject) {
+      throw new Error(
+        "A newsletter needs a subject line: --subject <subject>.",
+      );
+    }
+    const document =
+      opts.bodyJsonFile === "-"
+        ? await readStdin()
+        : fs.readFileSync(opts.bodyJsonFile, "utf-8");
+    try {
+      return createContentBody.shape.body.parse({
+        subject: opts.subject,
+        preheader: opts.preheader,
+        bodyJson: JSON.parse(document ?? ""),
+      });
+    } catch (error) {
+      if (error instanceof SyntaxError) {
+        throw new Error("--body-json-file must contain a JSON document.");
+      }
+      throw error;
+    }
   }
 
   const text = await resolveText(opts);
@@ -109,7 +144,7 @@ async function buildBody(
   if (kind === "tweet" || kind === "linkedin") {
     if (!text) {
       throw new Error(
-        "Provide the text via --text, --file, or stdin (or --tweet for a thread)."
+        "Provide the text via --text, --file, or stdin (or --tweet for a thread).",
       );
     }
     return { text };
@@ -117,7 +152,9 @@ async function buildBody(
 
   if (kind === "newsletter") {
     if (!opts.subject) {
-      throw new Error("A newsletter needs a subject line: --subject <subject>.");
+      throw new Error(
+        "A newsletter needs a subject line: --subject <subject>.",
+      );
     }
     if (!text) {
       throw new Error("Provide the email body via --text, --file, or stdin.");
@@ -131,12 +168,12 @@ async function buildBody(
 
   if (!opts.headline) {
     throw new Error(
-      "An X Article needs the headline X publishes: --headline <headline>."
+      "An X Article needs the headline X publishes: --headline <headline>.",
     );
   }
   if (!text) {
     throw new Error(
-      "Provide the article markdown via --text, --file, or stdin."
+      "Provide the article markdown via --text, --file, or stdin.",
     );
   }
   return {
@@ -150,27 +187,31 @@ function addBodyOptions(cmd: Command): Command {
   return cmd
     .option(
       "--text <text>",
-      "Body text: the post itself for tweet/linkedin, the email or article body otherwise"
+      "Body text: the post itself for tweet/linkedin, the email or article body otherwise",
     )
-    .option("--file <path>", "Read the body from a file")
+    .option("--file <path>", "Read the Markdown/text body from a file")
+    .option(
+      "--body-json-file <path>",
+      "Read a complete rich newsletter document from JSON (use - for stdin). newsletter only",
+    )
     .option(
       "--tweet <text>",
       "One tweet in a thread, in posting order (repeatable). tweet only",
       collectTweets,
-      [] as string[]
+      [] as string[],
     )
     .option("--subject <subject>", "Subject line. newsletter only")
     .option(
       "--preheader <preheader>",
-      "Preview line shown after the subject. newsletter only"
+      "Preview line shown after the subject. newsletter only",
     )
     .option(
       "--headline <headline>",
-      "The headline X publishes. x_article only — separate from --title, which only names the piece in your library"
+      "The headline X publishes. x_article only — separate from --title, which only names the piece in your library",
     )
     .option(
       "--canonical-url <url>",
-      "The original post this Article is a version of. x_article only"
+      "The original post this Article is a version of. x_article only",
     );
 }
 
@@ -207,7 +248,7 @@ export function registerContentCommands(program: Command): void {
   const contentCmd = program
     .command("content")
     .description(
-      "Manage drafted content (X posts, LinkedIn posts, newsletters, X Articles)"
+      "Manage drafted content (X posts, LinkedIn posts, newsletters, X Articles)",
     );
 
   // create
@@ -218,12 +259,12 @@ export function registerContentCommands(program: Command): void {
       .requiredOption("--kind <kind>", `Kind of piece (${KIND_LIST})`)
       .requiredOption(
         "--title <title>",
-        "What the piece is called in your library"
+        "What the piece is called in your library",
       )
       .option(
         "--bucket <bucketId>",
-        "Group this piece with the post it was made from. Get the id from `paragraph content bucket create <post-id>`"
-      )
+        "Group this piece with the post it was made from. Get the id from `paragraph content bucket create <post-id>`",
+      ),
   )
     .addHelpText(
       "after",
@@ -235,7 +276,7 @@ Examples:
   $ paragraph content create --kind newsletter --title "October update" --subject "What we shipped" --file ./body.md
   $ paragraph content create --kind x_article --title "Editor rewrite" --headline "Why we rebuilt the editor" --file ./article.md
   $ cat post.md | paragraph content create --kind linkedin --title "Launch note" --json
-  $ paragraph content create --kind tweet --title "Thread" --tweet "First." --bucket $(paragraph content bucket create abc123 --json | jq -r .bucketId)`
+  $ paragraph content create --kind tweet --title "Thread" --tweet "First." --bucket $(paragraph content bucket create abc123 --json | jq -r .bucketId)`,
     )
     .action(async function (this: Command, opts) {
       try {
@@ -266,7 +307,7 @@ Examples:
     .option("--kind <kind>", `Filter by kind (${KIND_LIST})`)
     .option(
       "--status <status>",
-      "Filter by lifecycle (all|draft|published|archived). Default: all, which excludes archived pieces"
+      "Filter by lifecycle (all|draft|published|archived). Default: all, which excludes archived pieces",
     )
     .option("--limit <n>", "Max number of results (1-50)", "20")
     .option("--cursor <cursor>", "Pagination cursor from a previous request")
@@ -277,7 +318,7 @@ Examples:
   $ paragraph content list
   $ paragraph content list --kind tweet --status draft
   $ paragraph content list --status archived --limit 50 --json
-  $ paragraph content list --json | jq -r '.data[].id'`
+  $ paragraph content list --json | jq -r '.data[].id'`,
     )
     .action(async function (this: Command, opts) {
       try {
@@ -318,7 +359,7 @@ Examples:
     .option("--id <id>", "Content ID")
     .option(
       "--field <name>",
-      "Output a single field value (e.g., body, title, status)"
+      "Output a single field value (e.g., body, title, status)",
     )
     .addHelpText(
       "after",
@@ -327,7 +368,7 @@ Examples:
   $ paragraph content get abc123
   $ paragraph content get --id abc123 --json
   $ paragraph content get abc123 --field body
-  $ paragraph content get abc123 --json | jq '.body.tweets'`
+  $ paragraph content get abc123 --json | jq '.body.tweets'`,
     )
     .action(async function (this: Command, id: string | undefined, opts) {
       try {
@@ -339,23 +380,19 @@ Examples:
           const value = (data as Record<string, unknown>)[opts.field];
           if (value === undefined) {
             throw new Error(
-              `Field "${opts.field}" not found. Available: ${Object.keys(data).join(", ")}`
+              `Field "${opts.field}" not found. Available: ${Object.keys(data).join(", ")}`,
             );
           }
           process.stdout.write(
             typeof value === "object" && value !== null
               ? JSON.stringify(value, null, 2)
-              : String(value)
+              : String(value),
           );
           if (process.stdout.isTTY) process.stdout.write("\n");
           return;
         }
 
-        outputData(
-          this,
-          { ...summarize(data), Excerpt: data.excerpt },
-          data
-        );
+        outputData(this, { ...summarize(data), Excerpt: data.excerpt }, data);
       } catch (err) {
         handleError(err);
       }
@@ -370,8 +407,8 @@ Examples:
       .option("--title <title>", "New name for this piece in your library")
       .option(
         "--bucket <bucketId>",
-        "Group this piece with the post it was made from. A piece already grouped with a different post is refused rather than moved"
-      )
+        "Group this piece with the post it was made from. A piece already grouped with a different post is refused rather than moved",
+      ),
   )
     .addHelpText(
       "after",
@@ -383,8 +420,9 @@ Examples:
   $ paragraph content update abc123 --bucket c4e1a9d2-30b7-4f68-8a15-2d9c6b0e7f43
   $ cat rewrite.md | paragraph content update abc123 --json
 
+For rich newsletters, preserve the complete bodyJson document with --body-json-file.
 The body is replaced, not merged — send the whole artifact. A queued send locks
-the words; renaming is always allowed.`
+the words; renaming is always allowed.`,
     )
     .action(async function (this: Command, id: string | undefined, opts) {
       try {
@@ -393,7 +431,7 @@ the words; renaming is always allowed.`
 
         if (!opts.title && !opts.bucket && !hasBodyFlags(opts)) {
           throw new Error(
-            "Nothing to update. Provide --title, --bucket, or a body via --text, --file, --tweet, --subject, --preheader, --headline, or --canonical-url."
+            "Nothing to update. Provide --title, --bucket, or a body via --text, --file, --body-json-file, --tweet, --subject, --preheader, --headline, or --canonical-url.",
           );
         }
 
@@ -402,7 +440,7 @@ the words; renaming is always allowed.`
         const body = hasBodyFlags(opts)
           ? await buildBody(
               parseKind((await content.getContent(contentId, apiKey)).kind),
-              opts
+              opts,
             )
           : undefined;
 
@@ -432,7 +470,7 @@ the words; renaming is always allowed.`
 Examples:
   $ paragraph content archive abc123
   $ paragraph content archive --id abc123 --dry-run
-  $ paragraph content archive abc123 --json`
+  $ paragraph content archive abc123 --json`,
     )
     .action(async function (this: Command, id: string | undefined, opts) {
       try {
@@ -445,7 +483,7 @@ Examples:
           outputData(
             this,
             { ...summarize(data), Action: "archive (dry-run)" },
-            { ...data, dryRun: true }
+            { ...data, dryRun: true },
           );
           return;
         }
@@ -456,7 +494,7 @@ Examples:
         outputData(
           this,
           { ID: contentId, Status: "archived" },
-          { id: contentId, status: "archived" }
+          { id: contentId, status: "archived" },
         );
       } catch (err) {
         handleError(err);
@@ -474,7 +512,7 @@ Examples:
 Examples:
   $ paragraph content restore abc123
   $ paragraph content restore --id abc123 --json
-  $ paragraph content list --status archived --json | jq -r '.data[].id'`
+  $ paragraph content list --status archived --json | jq -r '.data[].id'`,
     )
     .action(async function (this: Command, id: string | undefined, opts) {
       try {
@@ -485,7 +523,7 @@ Examples:
         outputData(
           this,
           { ID: contentId, Status: "restored" },
-          { id: contentId, restored: true }
+          { id: contentId, restored: true },
         );
       } catch (err) {
         handleError(err);
@@ -506,7 +544,7 @@ function registerBucketCommands(contentCmd: Command): void {
   const bucketCmd = contentCmd
     .command("bucket")
     .description(
-      "Group a post with everything made out of it, as the writer sees it under Content"
+      "Group a post with everything made out of it, as the writer sees it under Content",
     );
 
   bucketCmd
@@ -521,7 +559,7 @@ Examples:
   $ paragraph content bucket create --post-id abc123 --json
 
 Safe to repeat: a post that already has a group gets the same ID back. Pass the
-ID to \`content create --bucket\` on everything you draft from that post.`
+ID to \`content create --bucket\` on everything you draft from that post.`,
     )
     .action(async function (this: Command, postId: string | undefined, opts) {
       try {
@@ -531,7 +569,7 @@ ID to \`content create --bucket\` on everything you draft from that post.`
 
         writeSuccess(`Group ready: ${data.bucketId}`);
         writeInfo(
-          "Pass it as --bucket on the content you draft from this post."
+          "Pass it as --bucket on the content you draft from this post.",
         );
         outputData(this, { "Bucket ID": data.bucketId }, data);
       } catch (err) {
@@ -548,7 +586,7 @@ ID to \`content create --bucket\` on everything you draft from that post.`
       `
 Examples:
   $ paragraph content bucket for-post abc123
-  $ paragraph content bucket for-post abc123 --json | jq -r .bucketId`
+  $ paragraph content bucket for-post abc123 --json | jq -r .bucketId`,
     )
     .action(async function (this: Command, postId: string | undefined, opts) {
       try {
@@ -574,7 +612,7 @@ Examples:
       `
 Examples:
   $ paragraph content bucket get c4e1a9d2-30b7-4f68-8a15-2d9c6b0e7f43
-  $ paragraph content bucket get c4e1a9d2-... --json | jq -r '.members[].channel'`
+  $ paragraph content bucket get c4e1a9d2-... --json | jq -r '.members[].channel'`,
     )
     .action(async function (this: Command, bucketId: string | undefined, opts) {
       try {
@@ -615,7 +653,7 @@ Examples:
       `
 Examples:
   $ paragraph content bucket list
-  $ paragraph content bucket list --limit 50 --json`
+  $ paragraph content bucket list --limit 50 --json`,
     )
     .action(async function (this: Command, opts) {
       try {
