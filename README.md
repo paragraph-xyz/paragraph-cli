@@ -130,6 +130,7 @@ paragraph content create --kind tweet --title "Launch note" --text "We shipped i
 paragraph content create --kind tweet --title "Thread" --tweet "First." --tweet "Second."
 paragraph content create --kind linkedin --title "Launch note" --file ./post.md
 paragraph content create --kind newsletter --title "October update" --subject "What we shipped" --file ./body.md
+paragraph content create --kind newsletter --title "Rich update" --subject "What we shipped" --body-json-file ./document.json
 paragraph content create --kind x_article --title "Editor rewrite" --headline "Why we rebuilt the editor" --file ./article.md
 cat post.md | paragraph content create --kind linkedin --title "Launch note"
 
@@ -145,6 +146,7 @@ paragraph content get <id> --field body
 # Rename, replace the body, or both. The body is replaced, not merged.
 paragraph content update <id> --title "Launch note, second pass"
 paragraph content update <id> --text "Rewritten, and shorter."
+paragraph content update <id> --subject "What we shipped" --body-json-file ./document.json
 
 # Archive and restore
 paragraph content archive <id>
@@ -321,3 +323,5 @@ npm run release major   # 0.1.0 → 1.0.0
 ```
 
 Builds, tests, publishes to npm, creates a GitHub release, and updates the Homebrew tap. Requires `gh` CLI and npm publish access.
+
+Rich newsletter `--body-json-file` input is a complete editor JSON document, not a JSON string or Markdown. Use `-` to read JSON from stdin. Read the saved draft first; preserve its subject, preheader, formatting, and media when replacing its body. Markdown `--text`/`--file` and rich JSON are mutually exclusive. Creating or editing a draft does not approve delivery.
