@@ -10,7 +10,6 @@ import { GetPost } from "./screens/GetPost.js";
 import { Feed } from "./screens/Feed.js";
 import { PostsByTag } from "./screens/PostsByTag.js";
 import { PublicationsMenu } from "./screens/PublicationsMenu.js";
-import { SearchMenu } from "./screens/SearchMenu.js";
 import { CoinsMenu } from "./screens/CoinsMenu.js";
 import { Login } from "./screens/Login.js";
 import { Whoami } from "./screens/Whoami.js";
@@ -22,13 +21,10 @@ import { PostUpdate } from "./screens/PostUpdate.js";
 import { PostDelete } from "./screens/PostDelete.js";
 import { PublicationDetail } from "./screens/PublicationDetail.js";
 import { MyPublication } from "./screens/MyPublication.js";
-import { SearchPosts } from "./screens/SearchPosts.js";
-import { SearchBlogs } from "./screens/SearchBlogs.js";
 import { SubscriberList } from "./screens/SubscriberList.js";
 import { SubscriberAdd } from "./screens/SubscriberAdd.js";
 import { SubscriberImport } from "./screens/SubscriberImport.js";
 import { CoinDetail } from "./screens/CoinDetail.js";
-import { CoinSearch } from "./screens/CoinSearch.js";
 import { CoinHolders } from "./screens/CoinHolders.js";
 import { PopularCoins } from "./screens/PopularCoins.js";
 import { SubscriberCount } from "./screens/SubscriberCount.js";
@@ -68,8 +64,6 @@ export function Router() {
       return <PostsByTag />;
     case "publications-menu":
       return <PublicationsMenu />;
-    case "search-menu":
-      return <SearchMenu />;
     case "coins-menu":
       return <CoinsMenu />;
     case "login":
@@ -92,10 +86,6 @@ export function Router() {
       return <PublicationDetail />;
     case "my-publication":
       return <MyPublication />;
-    case "search-posts":
-      return <SearchPosts />;
-    case "search-blogs":
-      return <SearchBlogs />;
     case "subscriber-list":
       return <SubscriberList />;
     case "subscriber-add":
@@ -104,8 +94,6 @@ export function Router() {
       return <SubscriberImport />;
     case "coin-detail":
       return <CoinDetail />;
-    case "coin-search":
-      return <CoinSearch />;
     case "coin-holders":
       return <CoinHolders />;
     case "popular-coins":

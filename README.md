@@ -188,13 +188,6 @@ paragraph publication get blog.variant.fund
 paragraph publication get <publication-id>
 ```
 
-### Search
-
-```bash
-paragraph search post --query "ethereum"
-paragraph search blog --query "web3"
-```
-
 ### Subscribers
 
 ```bash
@@ -209,7 +202,6 @@ paragraph subscriber import --csv subscribers.csv
 ```bash
 paragraph coin get <id-or-address>
 paragraph coin popular --limit 10
-paragraph coin search --query "test"
 paragraph coin holders <id-or-address> --limit 50
 paragraph coin quote <id-or-address> --amount <wei>
 ```
@@ -241,7 +233,6 @@ All commands support `--json`. Data goes to **stdout**, status messages to **std
 ```bash
 paragraph --json post list | jq '.data[0].title'
 paragraph --json post get <id> | jq '.markdown'
-paragraph --json search post --query "web3" | jq '.length'
 ```
 
 Paginated commands return:

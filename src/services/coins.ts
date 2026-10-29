@@ -32,13 +32,6 @@ export async function getPopularCoins(pagination?: {
   return { items, cursor: pag.cursor };
 }
 
-export async function searchCoins(
-  query: string
-) {
-  const client = createClient();
-  return client.search.coins(query);
-}
-
 export async function getCoinQuote(
   idOrAddress: string,
   amount: string

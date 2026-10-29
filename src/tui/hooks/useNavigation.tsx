@@ -20,15 +20,11 @@ export type Screen =
   | { name: "publications-menu" }
   | { name: "publication-detail" }
   | { name: "my-publication" }
-  | { name: "search-menu" }
-  | { name: "search-posts" }
-  | { name: "search-blogs" }
   | { name: "subscriber-list" }
   | { name: "subscriber-add" }
   | { name: "subscriber-import" }
   | { name: "coins-menu" }
   | { name: "coin-detail" }
-  | { name: "coin-search" }
   | { name: "coin-holders" }
   | { name: "popular-coins" }
   | { name: "subscriber-count" }

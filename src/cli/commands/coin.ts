@@ -71,32 +71,6 @@ Examples:
     });
 
   coin
-    .command("search")
-    .description("Search for coins")
-    .requiredOption("--query <q>", "Search query")
-    .addHelpText("after", `
-Examples:
-  $ paragraph coin search --query "ethereum"
-  $ paragraph coin search --query "eth" --json`)
-    .action(async function (this: Command, opts) {
-      try {
-        const items = await coins.searchCoins(opts.query);
-        outputTable(
-          this,
-          ["Ticker", "Publication", "Contract"],
-          items.map((r) => [
-            r.coin.ticker || "",
-            r.blog.name || "",
-            r.coin.contractAddress || "",
-          ]),
-          items
-        );
-      } catch (err) {
-        handleError(err);
-      }
-    });
-
-  coin
     .command("holders [id-or-address]")
     .description("List coin holders")
     .option("--id <id-or-address>", "Coin ID or contract address")

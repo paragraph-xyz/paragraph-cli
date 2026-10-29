@@ -7,7 +7,6 @@ import { useNavigation, Screen } from "../hooks/useNavigation.js";
 const items = [
   { label: "View coin details", value: "coin-detail" },
   { label: "Popular coins", value: "popular-coins" },
-  { label: "Search coins", value: "coin-search" },
   { label: "View coin holders", value: "coin-holders" },
 ] as const;
 

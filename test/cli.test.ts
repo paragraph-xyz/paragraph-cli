@@ -24,7 +24,6 @@ describe("CLI program", () => {
     expect(names).toContain("whoami");
     expect(names).toContain("post");
     expect(names).toContain("publication");
-    expect(names).toContain("search");
     expect(names).toContain("subscriber");
     expect(names).toContain("coin");
     expect(names).toContain("user");

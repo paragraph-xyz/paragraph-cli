@@ -9,7 +9,6 @@ const menuItems = [
   { label: "My Account", value: "account" },
   { label: "Posts", value: "posts-menu" },
   { label: "Publications", value: "publications-menu" },
-  { label: "Search", value: "search-menu" },
   { label: "Users", value: "user-detail" },
   { label: "Coins", value: "coins-menu" },
 ] as const;
