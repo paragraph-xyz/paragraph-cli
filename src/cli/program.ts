@@ -2,7 +2,6 @@ import { Command } from "commander";
 import { registerAuthCommands } from "./commands/auth.js";
 import { registerPostCommands } from "./commands/post.js";
 import { registerPublicationCommands } from "./commands/publication.js";
-import { registerSearchCommands } from "./commands/search.js";
 import { registerSubscriberCommands } from "./commands/subscriber.js";
 import { registerCoinCommands } from "./commands/coin.js";
 import { registerUserCommands } from "./commands/user.js";
@@ -38,7 +37,6 @@ export function createProgram(): Command {
   registerAuthCommands(program);
   registerPostCommands(program);
   registerPublicationCommands(program);
-  registerSearchCommands(program);
   registerSubscriberCommands(program);
   registerCoinCommands(program);
   registerUserCommands(program);
